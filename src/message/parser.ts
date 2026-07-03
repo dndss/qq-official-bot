@@ -113,15 +113,22 @@ export namespace Message {
                     type = 'face'
                     attrs = attrs.map((attr: string) => attr.replace('faceId', 'id'))
                 } else if (type.startsWith('@')) {
-                    if (type.startsWith('@!')) {
-                        const id = type.slice(2)
-                        type = 'at'
-                        attrs = Object.entries(payload.mentions.find((u: Dict) => u.id === id) || {})
-                            .map(([key, value]) => `${key === 'id' ? 'user_id' : key}=${value}`)
-                    } else if (type === '@everyone') {
-                        type = 'at'
-                        attrs = ['user_id=all']
-                    }
+                    const id = type.replace(/^@!?/, '')
+                    const isAll = id === 'all' || id === 'everyone'
+                    const mentions = Array.isArray(payload.mentions) ? payload.mentions : []
+                    const mention = isAll
+                        ? mentions.find((u: Dict) => u.scope === 'all')
+                        : mentions.find((u: Dict) =>
+                            [u.id, u.member_openid, u.user_openid].includes(id)
+                        )
+                    const mentionData = { ...(mention || {}) }
+                    delete mentionData.id
+                    mentionData.user_id = isAll
+                        ? 'all'
+                        : mention?.id || mention?.member_openid || mention?.user_openid || id
+                    type = 'at'
+                    attrs = Object.entries(mentionData)
+                        .map(([key, value]) => `${key}=${value}`)
                 } else if (/^[a-z]+:[0-9]+$/.test(type)) {
                     attrs = ['id=' + type.split(':')[1]]
                     type = 'face'

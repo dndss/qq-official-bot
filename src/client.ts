@@ -44,11 +44,18 @@ export class Client<T extends ReceiverMode, M extends ApplicationPlatform = Appl
     removeAt(payload: Dict): void {
         if (this.config.removeAt === false) return;
 
-        let content = payload.content;
-        payload.mentions?.forEach((mention: Dict) => {
-            if (mention?.id) content = content.replace(new RegExp(`<@!?${mention.id}>\\s*`, 'g'), '');
-        });
-        payload.content = content.trimStart();
+        if (typeof payload.content !== 'string' || !Array.isArray(payload.mentions)) return;
+
+        const mention = payload.mentions.find((item: Dict) =>
+            item?.is_you === true && item?.scope === 'single'
+        );
+        const id = mention?.id || mention?.member_openid || mention?.user_openid;
+        if (!id) return;
+
+        const escapedId = String(id).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        payload.content = payload.content
+            .replace(new RegExp(`<@!?${escapedId}>\\s*`), '')
+            .trimStart();
     }
 
     processPayload(event_id: string, event: string, payload: Dict): Dict | null {
