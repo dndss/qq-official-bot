@@ -1,6 +1,6 @@
 {
     "name": "qq-official-bot",
-    "version": "1.2.3",
+    "version": "1.2.3-dndss.1",
     "description": "qq机器人开发SDK",
     "main": "lib/index.js",
     "engines": {
@@ -12,6 +12,7 @@
         "dtsc": "dtsc --project tsconfig.dtsc.json",
         "clean": "rm -rf ./lib",
         "build": "npm run compile && npm run dtsc",
+        "prepare": "npm run build",
         "dev": "ts-node-dev -r tsconfig-paths/register ./src/test.ts",
         "pub": "npm publish --access public",
         "docs:dev": "vitepress dev docs --port 5566",
@@ -25,7 +26,7 @@
         "README.md"
     ],
     "repository": {
-        "url": "git+https://github.com/zhinjs/qq-official-bot.git",
+        "url": "git+https://github.com/dndss/qq-official-bot.git",
         "type": "git"
     },
     "keywords": [

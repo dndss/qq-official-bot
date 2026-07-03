@@ -20,7 +20,7 @@ import {
 } from "@/types";
 import { Quotable, Sendable } from "@/elements";
 import { UnsupportedMethodError } from "./constants";
-import { AxiosResponse } from "axios";
+import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { GuildMember } from "@/entries/guildMember";
 import { ActionNoticeEvent } from "@/events/notice";
 import { GuildMessageEvent } from "./events";
@@ -501,8 +501,8 @@ export class Bot<T extends ReceiverMode = ReceiverMode, M extends ApplicationPla
      * @param group_id
      * @param member_id
      */
-    async getGroupMemberInfo(group_id: string, member_id: string) {
-        throw UnsupportedMethodError
+    async getGroupMemberInfo(group_id: string, member_id: string, config?: AxiosRequestConfig) {
+        return this.memberService.getGroupMemberInfo(group_id, member_id, config)
     }
     /**
      * 获取好友列表
