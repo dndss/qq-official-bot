@@ -58,6 +58,32 @@ export class Client<T extends ReceiverMode, M extends ApplicationPlatform = Appl
             .trimStart();
     }
 
+    private completeGroupAtMention(event: string, payload: Dict): void {
+        if (event !== 'GROUP_AT_MESSAGE_CREATE' || !this.self_id) return;
+
+        const mentions = Array.isArray(payload.mentions) ? payload.mentions : [];
+        const hasSelfMention = mentions.some((mention: Dict) =>
+            mention?.is_you === true && mention?.scope === 'single'
+        );
+        if (hasSelfMention) return;
+
+        const selfId = String(this.self_id);
+        payload.mentions = [{
+            bot: true,
+            id: selfId,
+            member_openid: selfId,
+            is_you: true,
+            scope: 'single',
+            ...(this.nickname ? { username: this.nickname } : {})
+        }, ...mentions];
+
+        const content = typeof payload.content === 'string' ? payload.content : '';
+        const escapedId = selfId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        if (!new RegExp(`<@!?${escapedId}>`).test(content)) {
+            payload.content = `<@${selfId}>${content}`;
+        }
+    }
+
     processPayload(event_id: string, event: string, payload: Dict): Dict | null {
         const [post_type, ...sub_type] = event.split('.');
         const result: Dict = {
@@ -83,6 +109,7 @@ export class Client<T extends ReceiverMode, M extends ApplicationPlatform = Appl
         const { d: payload, id: event_id = '' } = wsRes;
         if (!payload || !event) return;
 
+        this.completeGroupAtMention(event, payload);
         const transformEvent = QQEvent[event] ?? 'system';
 
         try {

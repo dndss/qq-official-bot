@@ -2083,6 +2083,7 @@ export class Client<T extends ReceiverMode, M extends ApplicationPlatform = Appl
     get receiver(): import("@/receivers").ResolveReceiver<T, M>;
     constructor(config: Client.Config<T, M>);
     removeAt(payload: Dict): void;
+    private completeGroupAtMention;
     processPayload(event_id: string, event: string, payload: Dict): Dict | null;
     dispatchEvent(event: string, wsRes: DataPacket): void;
     em(event: string, payload: Dict): void;
