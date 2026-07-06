@@ -47,6 +47,11 @@ export interface MessageElemMap {
         /** 仅接收有效 */
         name?: string
     };
+    file: {
+        file: string | Buffer
+        url?: string
+        name?: string
+    };
     markdown: {
         content: string
         custom_template_id: never
@@ -91,6 +96,7 @@ export type EmbedElem = MessageElem<'embed'>
 export type ImageElem = MessageElem<"image">;
 export type VideoElem = MessageElem<"video">;
 export type AudioElem = MessageElem<"audio">;
+export type FileElem = MessageElem<"file">;
 export type LinkElem = MessageElem<'link'>
 export type MDElem = MessageElem<'markdown'>
 export type KeyboardElem = MessageElem<'keyboard'>
@@ -121,4 +127,5 @@ export type Sendable =
         | EmbedElem // Embed元素 仅频道和频道私信支持
         | VideoElem // 视频消息元素
         | AudioElem // 语音消息元素
+        | FileElem // 文件消息元素
     >; // 带回复的消息元素

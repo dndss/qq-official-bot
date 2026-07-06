@@ -1237,6 +1237,11 @@ export interface MessageElemMap {
         /** 仅接收有效 */
         name?: string;
     };
+    file: {
+        file: string | Buffer;
+        url?: string;
+        name?: string;
+    };
     markdown: {
         content: string;
         custom_template_id: never;
@@ -1281,6 +1286,7 @@ export type EmbedElem = MessageElem<'embed'>;
 export type ImageElem = MessageElem<"image">;
 export type VideoElem = MessageElem<"video">;
 export type AudioElem = MessageElem<"audio">;
+export type FileElem = MessageElem<"file">;
 export type LinkElem = MessageElem<'link'>;
 export type MDElem = MessageElem<'markdown'>;
 export type KeyboardElem = MessageElem<'keyboard'>;
@@ -1290,12 +1296,12 @@ type RepeatableCombineElem = string | TextElem | FaceElem | LinkElem | AtElem | 
 type SingleWithRepeatEnd<T extends MessageElem> = [T, ...RepeatableCombineElem[]];
 type SingleWithRepeat<T extends MessageElem> = [...RepeatableCombineElem[], T] | SingleWithRepeatEnd<T>;
 type WithReply<T extends MessageElem> = T | [T] | SingleWithRepeat<T> | [ReplyElem, ...SingleWithRepeat<T>] | [ReplyElem, ...RepeatableCombineElem[]];
-export type Sendable = RepeatableCombineElem | (RepeatableCombineElem)[] | WithReply<ImageElem | KeyboardElem | MDElem | ArkElem | EmbedElem | VideoElem | AudioElem>;
+export type Sendable = RepeatableCombineElem | (RepeatableCombineElem)[] | WithReply<ImageElem | KeyboardElem | MDElem | ArkElem | EmbedElem | VideoElem | AudioElem | FileElem>;
 /**
  * 消息段工厂函数集合
  * 提供便捷的消息段创建方法
  */
-import type { MessageElem, MessageElemMap, TextElem, AtElem, FaceElem, ImageElem, VideoElem, AudioElem, MDElem, ArkElem, EmbedElem, ButtonElem, LinkElem, ReplyElem, KeyboardElem, Quotable } from "elements";
+import type { MessageElem, MessageElemMap, TextElem, AtElem, FaceElem, ImageElem, VideoElem, AudioElem, FileElem, MDElem, ArkElem, EmbedElem, ButtonElem, LinkElem, ReplyElem, KeyboardElem, Quotable } from "elements";
 import type { Dict } from "types";
 /**
  * 消息段工厂函数
@@ -1344,6 +1350,15 @@ export const segment: {
         url?: string;
         name?: string;
     }): AudioElem;
+    /**
+     * 创建文件消息段
+     * @param file 文件路径、Buffer数据、base64数据或网络地址
+     * @param options 可选参数
+     */
+    file(file: string | Buffer, options?: {
+        url?: string;
+        name?: string;
+    }): FileElem;
     /**
      * 创建Markdown消息段
      * @param content Markdown内容或自定义模板ID
@@ -1420,9 +1435,11 @@ export interface MessagePayload {
     embed?: any;
 }
 export interface FilePayload {
-    file_type?: number;
-    url: string;
+    file_type?: 1 | 2 | 3 | 4;
+    url?: string;
     file_data?: any;
+    file_name?: string;
+    local_path?: string;
 }
 export interface BuildResult {
     messagePayload: MessagePayload;
@@ -1521,6 +1538,8 @@ export class MessageBuilder {
      * 获取媒体类型编号
      */
     private getMediaType;
+    private getFileName;
+    private sanitizeFileName;
     /**
      * 获取文件哈希值
      */
@@ -1534,7 +1553,8 @@ export interface FileUploadResult {
 export interface UploadOptions {
     targetId: string;
     targetType: 'user' | 'group';
-    fileType: 1 | 2 | 3;
+    fileType: 1 | 2 | 3 | 4;
+    fileName?: string;
     sendMessage?: boolean;
 }
 /**
@@ -1553,7 +1573,7 @@ export class FileProcessor<T extends ReceiverMode = ReceiverMode, M extends Appl
      */
     uploadMultipleFiles(files: Array<{
         data: string | Buffer;
-        type: 1 | 2 | 3;
+        type: 1 | 2 | 3 | 4;
     }>, options: Omit<UploadOptions, 'fileType'>): Promise<FileUploadResult[]>;
     /**
      * 检查文件类型
@@ -1575,6 +1595,35 @@ export class FileProcessor<T extends ReceiverMode = ReceiverMode, M extends Appl
      * 清理临时文件
      */
     cleanupTempFiles(filePaths: string[]): Promise<void>;
+}
+import type { AxiosInstance } from 'axios';
+export type MediaFileType = 1 | 2 | 3 | 4;
+export interface MediaUploadResult {
+    file_uuid: string;
+    file_info: string;
+    ttl: number;
+}
+export interface ChunkedUploadProgress {
+    completedParts: number;
+    totalParts: number;
+    uploadedBytes: number;
+    totalBytes: number;
+}
+export interface ChunkedUploadOptions {
+    fileName?: string;
+    onProgress?: (progress: ChunkedUploadProgress) => void;
+}
+export class UploadDailyLimitExceededError extends Error {
+    readonly filePath: string;
+    readonly fileSize: number;
+    constructor(filePath: string, fileSize: number, message: string);
+}
+export class ChunkedUploader {
+    private readonly request;
+    constructor(request: AxiosInstance);
+    upload(endpointPath: string, filePath: string, fileType: MediaFileType, options?: ChunkedUploadOptions): Promise<MediaUploadResult>;
+    private finishPart;
+    private completeUpload;
 }
 /**
  * 消息系统入口文件

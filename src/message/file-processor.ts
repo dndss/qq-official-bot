@@ -16,7 +16,8 @@ export interface FileUploadResult {
 export interface UploadOptions {
   targetId: string;
   targetType: 'user' | 'group';
-  fileType: 1 | 2 | 3; // 1: image, 2: video, 3: audio
+  fileType: 1 | 2 | 3 | 4; // 1: image, 2: video, 3: audio, 4: file
+  fileName?: string;
   sendMessage?: boolean;
 }
 
@@ -41,6 +42,7 @@ export class FileProcessor<T extends ReceiverMode=ReceiverMode,M extends Applica
       const uploadPayload = {
         file_type: options.fileType,
         file_data: base64Data,
+        ...(options.fileType === 4 && options.fileName ? { file_name: options.fileName } : {}),
         srv_send_msg: options.sendMessage || false
       };
 
@@ -59,7 +61,7 @@ export class FileProcessor<T extends ReceiverMode=ReceiverMode,M extends Applica
   async uploadMultipleFiles(
     files: Array<{
       data: string | Buffer;
-      type: 1 | 2 | 3;
+      type: 1 | 2 | 3 | 4;
     }>,
     options: Omit<UploadOptions, 'fileType'>
   ): Promise<FileUploadResult[]> {

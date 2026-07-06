@@ -12,6 +12,7 @@ import type {
     ImageElem,
     VideoElem,
     AudioElem,
+    FileElem,
     MDElem,
     ArkElem,
     EmbedElem,
@@ -115,6 +116,24 @@ export const segment = {
     }): AudioElem {
         return {
             type: 'audio',
+            data: {
+                file,
+                ...options
+            }
+        }
+    },
+
+    /**
+     * 创建文件消息段
+     * @param file 文件路径、Buffer数据、base64数据或网络地址
+     * @param options 可选参数
+     */
+    file(file: string | Buffer, options?: {
+        url?: string
+        name?: string
+    }): FileElem {
+        return {
+            type: 'file',
             data: {
                 file,
                 ...options

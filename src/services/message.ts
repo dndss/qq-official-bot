@@ -5,7 +5,7 @@ import { AxiosInstance } from 'axios'
 import { Bot } from '@/bot'
 import { GuildMessageEvent, PrivateMessageEvent } from '@/events'
 import { Sendable, Quotable } from '@/elements'
-import { MessageBuilder, BuildResult, FileProcessor } from '@/message'
+import { MessageBuilder, BuildResult, ChunkedUploader } from '@/message'
 import { Message } from '@/message/parser'
 import { MessageAuditEvent } from '@/events'
 import { DMS, EmojiType } from '@/types'
@@ -124,7 +124,8 @@ export class MessageService {
         
         // 处理文件发送
         if (buildResult.isFile) {
-            buildResult.messagePayload.media = await this.uploadFile(endpointPath, buildResult);
+            const uploaded = await this.uploadFile(endpointPath, buildResult);
+            buildResult.messagePayload.media = { file_info: uploaded.file_info };
         }
 
         // 发送普通消息
@@ -135,10 +136,19 @@ export class MessageService {
      * 上传文件
      */
     private async uploadFile(endpointPath: string, buildResult: BuildResult): Promise<Message.FileInfo> {
+        const { local_path, ...payload } = buildResult.filePayload
+        if (local_path) {
+            if (!payload.file_type) throw new Error('Missing file_type for chunked upload')
+            const uploader = new ChunkedUploader(this.request)
+            return uploader.upload(endpointPath, local_path, payload.file_type, {
+                fileName: payload.file_name
+            })
+        }
+
         const { data: result } = await this.request.post<Message.FileInfo>(
             endpointPath + '/files',
             {
-                ...buildResult.filePayload,
+                ...payload,
                 srv_send_msg: false
             }
         );

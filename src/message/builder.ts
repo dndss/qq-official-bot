@@ -2,9 +2,12 @@
  * 消息构建器 - 专门负责构建消息内容
  */
 
-import { Sendable, MessageElem, ImageElem, VideoElem, AudioElem, ReplyElem, AtElem, LinkElem, TextElem, FaceElem, MDElem, KeyboardElem, ButtonElem, EmbedElem, ArkElem } from "@/elements";
+import { Sendable, MessageElem, ImageElem, VideoElem, AudioElem, FileElem, ReplyElem, AtElem, LinkElem, TextElem, FaceElem, MDElem, KeyboardElem, ButtonElem, EmbedElem, ArkElem } from "@/elements";
 import { md5 } from "@/utils";
 import { randomInt } from "crypto";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 export interface MessagePayload {
   msg_seq: number;
@@ -28,9 +31,11 @@ export interface MessagePayload {
 }
 
 export interface FilePayload {
-  file_type?: number;
-  url: string
+  file_type?: 1 | 2 | 3 | 4;
+  url?: string
   file_data?: any;
+  file_name?: string;
+  local_path?: string;
 }
 
 export interface BuildResult {
@@ -63,9 +68,7 @@ export class MessageBuilder {
       content: ''
     };
 
-    this.filePayload = {
-      url: ''
-    };
+    this.filePayload = {};
 
     if (source?.id) {
       this.messagePayload.msg_id = source.id;
@@ -138,7 +141,8 @@ export class MessageBuilder {
       case 'image':
       case 'audio':
       case 'video':
-        await this.handleMedia(elem as ImageElem | VideoElem | AudioElem);
+      case 'file':
+        await this.handleMedia(elem as ImageElem | VideoElem | AudioElem | FileElem);
         break;
       case 'markdown':
         this.handleMarkdown(elem as MDElem);
@@ -213,12 +217,15 @@ export class MessageBuilder {
   /**
    * 处理媒体元素（图片、视频、音频）
    */
-  private async handleMedia(elem: ImageElem | VideoElem | AudioElem): Promise<void> {
+  private async handleMedia(elem: ImageElem | VideoElem | AudioElem | FileElem): Promise<void> {
     const mediaType = this.getMediaType(elem.type);
+    if (this.isGuild && mediaType === 4) {
+      throw new Error('Guild messages do not support file elements');
+    }
 
     // 如果是回复消息，需要特殊处理
     if (this.messagePayload.msg_id || this.messagePayload.event_id) {// 频道消息的文件处理
-      const {url,blob,base64} = await this.formatMediaData(elem);
+      const {url,blob,base64,localPath} = await this.formatMediaData(elem, !this.isGuild);
       if (this.isGuild) {
         this.contentType = 'multipart/form-data';
         if (blob) {
@@ -232,14 +239,19 @@ export class MessageBuilder {
         // 这里需要调用上传接口，暂时标记为需要文件上传
         this.isFile = true;
         this.filePayload.file_type = mediaType;
-          if(base64) {
+        if (localPath) {
+          this.filePayload.local_path = localPath;
+        } else if(base64) {
           this.filePayload.file_data = base64;
         } else {
           this.filePayload.url = url;
         }
+        if (mediaType === 4) {
+          this.filePayload.file_name = this.getFileName(elem as FileElem, localPath, url);
+        }
       }
     } else {
-      const {url,blob,base64} = await this.formatMediaData(elem);
+      const {url,blob,base64,localPath} = await this.formatMediaData(elem, !this.isGuild);
       // 非回复消息的处理
       if (this.isGuild) {
         if (blob) {
@@ -251,10 +263,15 @@ export class MessageBuilder {
         this.messagePayload.msg_type = 7;
         this.isFile = true;
         this.filePayload.file_type = mediaType;
-        if(base64) {
+        if (localPath) {
+          this.filePayload.local_path = localPath;
+        } else if(base64) {
           this.filePayload.file_data = base64;
         } else {
           this.filePayload.url = url;
+        }
+        if (mediaType === 4) {
+          this.filePayload.file_name = this.getFileName(elem as FileElem, localPath, url);
         }
       }
     }
@@ -418,10 +435,14 @@ export class MessageBuilder {
   /**
    * 准备频道媒体数据
    */
-  private async formatMediaData(elem: ImageElem | VideoElem | AudioElem): Promise<{
+  private async formatMediaData(
+    elem: ImageElem | VideoElem | AudioElem | FileElem,
+    preserveLocalPath = false
+  ): Promise<{
     url: string;
     blob?: Blob;
     base64?: string;
+    localPath?: string;
   }> {
     if ('url' in elem.data && elem.data.url) return { url: elem.data.url };
 
@@ -452,11 +473,15 @@ export class MessageBuilder {
       };
     } else {
       try {
-        const fs = require('node:fs/promises');
+        const localPath = elem.data.file.startsWith('file://')
+          ? fileURLToPath(elem.data.file)
+          : elem.data.file;
+        if (preserveLocalPath) return { url: '', localPath };
+        const buffer = await fs.readFile(localPath);
         return { 
           url: '',
-          blob: new Blob([await fs.readFile(elem.data.file.replace("file://", ""))]),
-          base64: (await fs.readFile(elem.data.file.replace("file://", ""))).toString('base64')
+          blob: new Blob([buffer]),
+          base64: buffer.toString('base64')
         };
       } catch {
         throw new Error("无效的文件路径: " + elem.data.file);
@@ -467,8 +492,36 @@ export class MessageBuilder {
   /**
    * 获取媒体类型编号
    */
-  private getMediaType(type: string): 1 | 2 | 3 {
-    return (['image', 'video', 'audio'].indexOf(type) + 1) as 1 | 2 | 3;
+  private getMediaType(type: string): 1 | 2 | 3 | 4 {
+    const types = {
+      image: 1,
+      video: 2,
+      audio: 3,
+      file: 4
+    } as const;
+    const mediaType = types[type as keyof typeof types];
+    if (!mediaType) throw new Error(`Unsupported media type: ${type}`);
+    return mediaType;
+  }
+
+  private getFileName(
+    elem: FileElem,
+    localPath?: string,
+    url?: string
+  ): string {
+    if (elem.data.name) return this.sanitizeFileName(elem.data.name);
+    if (localPath) return this.sanitizeFileName(path.basename(localPath));
+    if (url) {
+      try {
+        return this.sanitizeFileName(decodeURIComponent(new URL(url).pathname));
+      } catch {}
+    }
+    return 'file';
+  }
+
+  private sanitizeFileName(fileName: string): string {
+    const name = fileName.split(/[/\\]/).pop()?.replace(/[\u0000-\u001f]/g, '').trim();
+    return name || 'file';
   }
 
   /**
