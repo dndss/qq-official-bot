@@ -4,7 +4,7 @@ import { WebSocket } from 'ws';
 import { ed25519 } from '@noble/curves/ed25519';
 import { Server, IncomingMessage, ServerResponse } from 'http';
 import { BinaryLike } from 'crypto';
-import { AxiosInstance, type AxiosInstance, AxiosRequestConfig } from 'axios';
+import { AxiosInstance, type AxiosInstance } from 'axios';
 export enum OpCode {
     DISPATCH = 0,// 服务端进行消息推送
     HEARTBEAT = 1,// 客户端发送心跳
@@ -1665,21 +1665,9 @@ export namespace Group {
     }
 }
 export namespace GroupMember {
-    type Role = 'owner' | 'admin' | 'member';
     interface Info {
         user: User.Info;
         group_id: string;
-    }
-    interface ApiInfo {
-        member_id: string;
-        member_openid: string;
-        username: string;
-        role: Role;
-        member_role: Role;
-        bot: boolean;
-        join_time: number;
-        joined_at: string;
-        union_openid?: string;
     }
 }
 /**
@@ -2383,10 +2371,6 @@ export class MemberService {
      */
     getGuildMemberInfo(guildId: string, memberId: string): Promise<GuildMember.ApiInfo>;
     /**
-     * 获取群成员信息
-     */
-    getGroupMemberInfo(groupId: string, memberId: string, config?: AxiosRequestConfig): Promise<GroupMember.ApiInfo>;
-    /**
      * 批量禁言频道成员
      */
     muteMembers(guildId: string, memberIds: string[], seconds: number, endTime?: number): Promise<boolean>;
@@ -2765,12 +2749,6 @@ export class Bot<T extends ReceiverMode = ReceiverMode, M extends ApplicationPla
      * @param group_id
      */
     getGroupMemberList(group_id: string): Promise<void>;
-    /**
-     * 获取群成员信息
-     * @param group_id
-     * @param member_id
-     */
-    getGroupMemberInfo(group_id: string, member_id: string, config?: AxiosRequestConfig): Promise<GroupMember.ApiInfo>;
     /**
      * 获取好友列表
      */
