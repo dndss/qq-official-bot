@@ -370,23 +370,9 @@ namespace Group {
 }
 
 namespace GroupMember {
-    type Role = 'owner' | 'admin' | 'member'
-
     interface Info {
         user: User.Info
         group_id: string
-    }
-
-    interface ApiInfo {
-        member_id: string
-        member_openid: string
-        username: string
-        role: Role
-        member_role: Role
-        bot: boolean
-        join_time: number
-        joined_at: string
-        union_openid?: string
     }
 }
 ```

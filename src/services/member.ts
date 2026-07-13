@@ -1,9 +1,8 @@
 /**
  * 成员服务类 - 负责所有成员相关的API操作
  */
-import { AxiosInstance, AxiosRequestConfig } from 'axios'
+import { AxiosInstance } from 'axios'
 import { GuildMember } from '@/entries/guildMember'
-import { GroupMember } from '@/entries/groupMember'
 
 export class MemberService {
     constructor(private request: AxiosInstance) {}
@@ -28,28 +27,6 @@ export class MemberService {
             roles,
             ...member,
             join_time: new Date(joined_at).getTime() / 1000,
-        }
-    }
-
-    /**
-     * 获取群成员信息
-     */
-    async getGroupMemberInfo(
-        groupId: string,
-        memberId: string,
-        config?: AxiosRequestConfig
-    ): Promise<GroupMember.ApiInfo> {
-        const { data } = await this.request.get(`/v2/groups/${groupId}/members/${memberId}`, config)
-        const member_openid = data.member_openid || memberId
-        const member_role = data.member_role as GroupMember.Role
-
-        return {
-            ...data,
-            member_id: member_openid,
-            member_openid,
-            role: member_role,
-            member_role,
-            join_time: new Date(data.joined_at).getTime() / 1000,
         }
     }
 

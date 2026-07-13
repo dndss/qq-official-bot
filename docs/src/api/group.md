@@ -96,44 +96,6 @@ try {
 }
 ```
 
-### 获取群成员信息
-
-获取指定群成员的详细信息。
-
-**方法名**: `bot.getGroupMemberInfo(groupId, memberId, config?)`
-
-**参数**:
-| 参数名 | 类型 | 必填 | 描述 |
-|-------|------|------|------|
-| `groupId` | `string` | ✅ | 群 ID |
-| `memberId` | `string` | ✅ | 成员 ID |
-| `config` | `AxiosRequestConfig` | ❌ | 请求配置，可用于设置超时时间 |
-
-```typescript
-try {
-    const memberInfo = await bot.getGroupMemberInfo(group_id, member_id)
-    console.log('群成员信息:', memberInfo)
-} catch (error) {
-    console.log('获取群成员信息失败:', error.message)
-}
-```
-
-返回值会保留 QQBot API 原始字段，并补充 SDK 统一字段：
-
-```typescript
-interface GroupMemberInfo {
-    member_id: string
-    member_openid: string
-    username: string
-    role: 'owner' | 'admin' | 'member'
-    member_role: 'owner' | 'admin' | 'member'
-    bot: boolean
-    join_time: number
-    joined_at: string
-    union_openid?: string
-}
-```
-
 ## 🎯 群消息类型
 
 ### 文本消息
