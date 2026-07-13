@@ -1,10 +1,98 @@
-import type { MessageElem, Sendable } from "@/elements";
+import type { ForwardMessageData, ForwardMessageNode, MessageElem, Sendable } from "@/elements";
 import { Bot } from "@";
 import type { Dict } from "@/types";
 import { trimQuote } from "@/utils/string";
 import type { User } from "@/entries/user";
 import type { ApplicationPlatform } from "@/receivers/middleware";
 import { ReceiverMode } from "@/receivers/base";
+
+type NumberedSection = {
+    index: number
+    body: string
+}
+
+function splitNumberedSections(content: string, marker: RegExp): NumberedSection[] | undefined {
+    const matches = [...content.matchAll(marker)]
+    if (!matches.length || content.slice(0, matches[0].index).trim()) return
+
+    return matches.map((match, index) => {
+        const start = (match.index || 0) + match[0].length
+        const end = matches[index + 1]?.index ?? content.length
+        return {
+            index: Number(match[1]),
+            body: content.slice(start, end).replace(/^\n/, '').replace(/\n+$/, '')
+        }
+    })
+}
+
+function dedent(content: string) {
+    const lines = content.split('\n')
+    const indents = lines
+        .filter(line => line.trim())
+        .map(line => line.match(/^[ \t]*/)?.[0].length || 0)
+    const indent = indents.length ? Math.min(...indents) : 0
+    return indent ? lines.map(line => line.slice(Math.min(indent, line.length))).join('\n') : content
+}
+
+function parseForwardNodes(content: string, nested = false): ForwardMessageNode[] | undefined {
+    const marker = nested ? /^--- 第(\d+)条 ---$/gm : /^=== 消息 (\d+) ===$/gm
+    const sections = splitNumberedSections(content, marker)
+    if (!sections) return
+
+    const nodes: ForwardMessageNode[] = []
+    for (const section of sections) {
+        const node = parseForwardNode(nested ? dedent(section.body) : section.body, section.index)
+        if (!node) return
+        nodes.push(node)
+    }
+    return nodes
+}
+
+function parseForwardNode(content: string, index: number): ForwardMessageNode | undefined {
+    const prefix = '[消息内容]'
+    if (!content.startsWith(prefix)) return
+
+    const senderPattern = /^\[发送者\][ \t]*(.*)$/gm
+    const senderMatches = [...content.matchAll(senderPattern)]
+    const senderMatch = senderMatches.at(-1)
+    if (!senderMatch || senderMatch.index === undefined || !senderMatch[1].trim()) return
+
+    const messageContent = content
+        .slice(prefix.length, senderMatch.index)
+        .replace(/^ /, '')
+        .replace(/\n$/, '')
+    const senderLineEnd = senderMatch.index + senderMatch[0].length
+    const tail = content.slice(senderLineEnd).replace(/^\n/, '').replace(/\n+$/, '')
+    const node: ForwardMessageNode = {
+        index,
+        sender_name: senderMatch[1].trim(),
+        content: messageContent
+    }
+
+    if (!tail) return node
+
+    const nestedPrefix = '[消息类型] 合并转发消息\n[关联消息]\n'
+    if (!tail.startsWith(nestedPrefix)) return
+    const children = parseForwardNodes(tail.slice(nestedPrefix.length), true)
+    if (!children) return
+    node.message_type = 'forward'
+    node.children = children
+    return node
+}
+
+function parseForwardMessage(content: string): ForwardMessageData | undefined {
+    const normalized = content.replace(/\r\n/g, '\n').replace(/\n+$/, '')
+    const titleMatch = normalized.match(/^\[([^\n]+)\]\n/)
+    if (!titleMatch) return
+
+    const nodes = parseForwardNodes(normalized.slice(titleMatch[0].length))
+    if (!nodes) return
+    return {
+        title: titleMatch[1],
+        nodes,
+        raw: content
+    }
+}
 
 export class Message {
     message_type: Message.Type
@@ -93,6 +181,15 @@ export namespace Message {
                 }
             })
             brief += `<reply,id=${payload.message_reference.message_id}>`
+        }
+        if (Number(payload.message_type) === 102) {
+            const forward = parseForwardMessage(payload.content || '')
+            if (forward) {
+                result.push({ type: 'forward', data: forward })
+                brief += payload.content || ''
+                delete payload.attachments
+                return [result, brief]
+            }
         }
         while (template.length) {
             const [match] = template.match(regex) || [];

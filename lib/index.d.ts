@@ -1200,6 +1200,18 @@ export interface Quotable {
     id?: string;
     event_id?: string;
 }
+export interface ForwardMessageNode {
+    index: number;
+    sender_name: string;
+    content: string;
+    message_type?: 'forward';
+    children?: ForwardMessageNode[];
+}
+export interface ForwardMessageData {
+    title: string;
+    nodes: ForwardMessageNode[];
+    raw: string;
+}
 export interface MessageElemMap {
     text: {
         text: string;
@@ -1242,6 +1254,8 @@ export interface MessageElemMap {
         url?: string;
         name?: string;
     };
+    /** 官方网关 message_type=102 展开的合并转发消息，仅接收有效 */
+    forward: ForwardMessageData;
     markdown: {
         content: string;
         custom_template_id: never;
@@ -1287,6 +1301,7 @@ export type ImageElem = MessageElem<"image">;
 export type VideoElem = MessageElem<"video">;
 export type AudioElem = MessageElem<"audio">;
 export type FileElem = MessageElem<"file">;
+export type ForwardElem = MessageElem<"forward">;
 export type LinkElem = MessageElem<'link'>;
 export type MDElem = MessageElem<'markdown'>;
 export type KeyboardElem = MessageElem<'keyboard'>;
