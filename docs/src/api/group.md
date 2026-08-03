@@ -24,9 +24,8 @@
 ```typescript
 // 使用服务模块（推荐）
 const result = await bot.messageService.sendGroupMessage(group_id, 'Hello Group!')
-if (result.success) {
-    console.log('群消息发送成功:', result.data)
-}
+console.log('群消息发送成功:', result.id)
+console.log('可用于关联后续引用事件的索引:', result.ext_info?.ref_idx)
 
 // 使用传统方法（向后兼容）
 await bot.sendGroupMessage(group_id, 'Hello, World!')
@@ -49,6 +48,9 @@ await bot.messageService.sendGroupMessage(group_id, [
     segment.text(' 你好!')
 ])
 ```
+
+成功响应中的 `ext_info.ref_idx` 会原样保留。后续群消息事件引用这条 Bot
+消息时，`message_scene.ext` 中的 `ref_msg_idx` 与该值对应。
 
 ### 撤回群消息
 

@@ -97,7 +97,7 @@ export class Bot<T extends ReceiverMode = ReceiverMode, M extends ApplicationPla
      * @param channel_id 频道id
      * @param role_id 角色id
      */
-    async getChannelPermissionOfRole(channel_id: string, role_id: string) {
+    async getChannelPermissionOfRole(channel_id: string, role_id: string): Promise<import("./types").ChannelRolePermissions> {
         return this.permissionService.getChannelRolePermission(channel_id, role_id)
     }
 

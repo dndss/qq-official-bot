@@ -20,7 +20,7 @@ export class Client<T extends ReceiverMode, M extends ApplicationPlatform = Appl
     status!: number;
     ws!: WebSocket;
 
-    get receiver() {
+    get receiver(): import("./receivers").ResolveReceiver<T, M> {
         return this.sessionManager.receiver;
     }
 

@@ -153,6 +153,10 @@ export namespace Message {
     export type MessageRet = {
         id: string
         timestamp: number
+        ext_info?: {
+            ref_idx?: string
+            [key: string]: unknown
+        }
     }
     export type Audit = {
         message_audit: {

@@ -19,6 +19,10 @@ export interface SendOptions {
 export interface SendResult {
     id: string;
     timestamp: number;
+    ext_info?: {
+        ref_idx?: string;
+        [key: string]: unknown;
+    };
     [key: string]: any;
 }
 
@@ -183,6 +187,7 @@ export class MessageService {
             id: result.id,
             timestamp: Date.now() / 1000,
             brief: buildResult.brief,
+            ...(result.ext_info && { ext_info: result.ext_info }),
         };
     }
 
