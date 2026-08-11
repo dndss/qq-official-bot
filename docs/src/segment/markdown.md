@@ -6,10 +6,10 @@ layout: doc
 
 Markdown 消息段用于发送格式化的富文本内容，支持丰富的文本样式和布局。
 
-群聊和 C2C 私聊发送 Markdown 时，SDK 默认设置
-`force_verify_image_resource: true`。当 Markdown 中的图片资源转存失败时，
-接口会返回错误且不会发送该消息；不包含图片的 Markdown 不受影响。显式设置为 `false`
-可以关闭校验，频道和频道私信不会默认添加此字段。
+群聊和 C2C 私聊可设置 `force_verify_image_resource: true` 校验 Markdown 图片资源。
+图片转存失败时接口会返回错误且不会发送该消息；SDK 仅透传此选项，不会默认开启或自动重试。
+OpenAPI 请求失败时，抛出的错误会保留响应中的 `code`、`err_code` 和 `trace_id`，
+调用方可据此识别 `304010`（`CHANGE_IMAGE_URL`）并自行决定是否重试。
 
 ## 类型定义
 

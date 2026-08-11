@@ -179,17 +179,25 @@ export class Client<T extends ReceiverMode, M extends ApplicationPlatform = Appl
             (res) => {
                 if (!res?.response?.data) return Promise.reject(res);
 
+                const data = res.response.data;
                 const {
                     code = res.response.status,
                     message = res.response.statusText
-                } = res.response.data;
+                } = data;
 
                 if ([304023, 304024].includes(code)) {
                     this.logger.warn(message);
                     return Promise.resolve(res.response.data);
                 }
 
-                const error = new Error(`Request "${res.config.url}" failed with code(${code}): ${message}`);
+                const error = Object.assign(
+                    new Error(`Request "${res.config.url}" failed with code(${code}): ${message}`),
+                    {
+                        code,
+                        err_code: data.err_code ?? code,
+                        trace_id: data.trace_id,
+                    }
+                );
                 return Promise.reject(error);
             }
         );
