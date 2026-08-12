@@ -13,6 +13,7 @@ export { ScheduleService } from './schedule'
 export { ThreadService } from './thread'
 export { AudioService } from './audio'
 export { BotService } from './bot'
+export { GroupService } from './group'
 
 // 定义通用API响应类型
 export type ApiResponse<T> = {

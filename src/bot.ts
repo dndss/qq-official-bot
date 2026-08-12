@@ -42,7 +42,8 @@ import {
     ScheduleService,
     ThreadService,
     AudioService,
-    BotService
+    BotService,
+    GroupService
 } from "@/services";
 
 
@@ -63,6 +64,7 @@ export class Bot<T extends ReceiverMode = ReceiverMode, M extends ApplicationPla
     public readonly threadService: ThreadService = new ThreadService(this.request);
     public readonly audioService: AudioService = new AudioService(this.request);
     public readonly botService: BotService = new BotService(this.request);
+    public readonly groupService: GroupService = new GroupService(this.request);
 
     constructor(config: Bot.Config<T, M>) {
         super(config)
@@ -495,6 +497,14 @@ export class Bot<T extends ReceiverMode = ReceiverMode, M extends ApplicationPla
      */
     async getGroupMemberList(group_id: string) {
         throw UnsupportedMethodError
+    }
+
+    /**
+     * 获取群基本信息
+     * @param group_id 群 OpenID
+     */
+    async getGroupInfo(group_id: string) {
+        return this.groupService.getInfo(group_id)
     }
     /**
      * 获取好友列表

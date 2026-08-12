@@ -8,6 +8,20 @@
 
 ## 📱 群消息管理
 
+### 获取群基本信息
+
+通过群 OpenID 获取群名称、简介、分类、标签及成员人数。
+
+**方法名**: `bot.groupService.getInfo(groupOpenid)` / `bot.getGroupInfo(groupOpenid)`
+
+```typescript
+const info = await bot.getGroupInfo(group_openid)
+console.log(info.group_name, info.group_member_num)
+```
+
+返回值保留 QQ OpenAPI 的原始字段：`group_openid`、`group_name`、
+`group_finger_memo`、`group_class_text`、`group_tags` 和 `group_member_num`。
+
 ### 发送群消息
 
 向指定群聊发送消息。
