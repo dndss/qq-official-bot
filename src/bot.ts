@@ -1,6 +1,6 @@
 import { Client } from "./client";
 
-import { Guild } from "@/entries";
+import { Group, Guild } from "@/entries";
 import {
     Announce,
     ApiBaseInfo,
@@ -505,6 +505,31 @@ export class Bot<T extends ReceiverMode = ReceiverMode, M extends ApplicationPla
      */
     async getGroupInfo(group_id: string) {
         return this.groupService.getInfo(group_id)
+    }
+
+    /**
+     * 获取机器人群内状态
+     * @param group_id 群 OpenID
+     */
+    async getGroupBotState(group_id: string) {
+        return this.groupService.getBotState(group_id)
+    }
+
+    /**
+     * 查询群禁言状态
+     * @param group_id 群 OpenID
+     */
+    async getGroupRestrictChatSetting(group_id: string) {
+        return this.groupService.getRestrictChatSetting(group_id)
+    }
+
+    /**
+     * 设置群成员禁言
+     * @param group_id 群 OpenID
+     * @param members 群成员禁言操作列表，单次最多 10 个
+     */
+    async setGroupMemberMuteState(group_id: string, members: Group.SetMemberMuteState[]) {
+        return this.groupService.setMemberMuteState(group_id, members)
     }
     /**
      * 获取好友列表

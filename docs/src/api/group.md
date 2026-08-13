@@ -22,6 +22,24 @@ console.log(info.group_name, info.group_member_num)
 返回值保留 QQ OpenAPI 的原始字段：`group_openid`、`group_name`、
 `group_finger_memo`、`group_class_text`、`group_tags` 和 `group_member_num`。
 
+### 获取机器人群内状态
+
+获取机器人在指定群中的 OpenID、入群时间、主动消息开关、接收消息设置和群成员角色。
+
+**方法名**: `bot.groupService.getBotState(groupOpenid)` / `bot.getGroupBotState(groupOpenid)`
+
+```typescript
+const state = await bot.getGroupBotState(group_openid)
+console.log(state.member_openid)
+console.log(state.joined_at)
+console.log(state.allow_proactive_msg)
+console.log(state.recv_msg_setting)
+console.log(state.member_role) // member、admin 或 owner
+```
+
+返回值完整保留 QQ OpenAPI 字段：`member_openid`、`joined_at`、
+`allow_proactive_msg`、`recv_msg_setting` 和 `member_role`。
+
 ### 发送群消息
 
 向指定群聊发送消息。
@@ -90,6 +108,40 @@ const success = await bot.recallGroupMessage(group_id, message_id)
 ```
 
 ## 👥 群成员管理
+
+### 查询群禁言状态
+
+查询群聊的全员禁言规则和当前处于禁言状态的成员。
+
+**方法名**: `bot.groupService.getRestrictChatSetting(groupOpenid)` / `bot.getGroupRestrictChatSetting(groupOpenid)`
+
+```typescript
+const setting = await bot.getGroupRestrictChatSetting(group_openid)
+console.log(setting.global_rule.mode, setting.members)
+```
+
+### 设置群成员禁言
+
+机器人需要拥有群管理员身份，单次最多操作 10 个成员。`mute_expire_at`
+使用 RFC3339 格式；解除禁言时可传空字符串。
+
+**方法名**: `bot.groupService.setMemberMuteState(groupOpenid, members)` / `bot.setGroupMemberMuteState(groupOpenid, members)`
+
+```typescript
+// 禁言或更新禁言到期时间
+await bot.setGroupMemberMuteState(group_openid, [{
+    op: 'add', // 已处于禁言状态时使用 update
+    member_openid,
+    mute_expire_at: new Date(Date.now() + 10 * 60 * 1000).toISOString()
+}])
+
+// 解除禁言
+await bot.setGroupMemberMuteState(group_openid, [{
+    op: 'del',
+    member_openid,
+    mute_expire_at: ''
+}])
+```
 
 ### 获取群成员列表
 
