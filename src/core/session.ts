@@ -227,7 +227,7 @@ export class Session<T extends ReceiverMode, M extends ApplicationPlatform = nev
 
     async stop() {
         this.userClose = true
-        this.receiver.emit('stop',this)
+        await this.connectionManager.disconnect()
     }
 
     /**
