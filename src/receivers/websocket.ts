@@ -57,6 +57,7 @@ export class WebSocketReceiver extends BaseReceiver<WebSocketHandler> {
     private isReconnect: boolean = false;
     private retryCount: number = 0;
     private isClosed: boolean = true;
+    private lifecycleGeneration: number = 0;
     private heartbeatTimer: NodeJS.Timeout | null = null;
     private heartbeatTimeoutTimer: NodeJS.Timeout | null = null;
     private lastHeartbeatAck: number = 0;
@@ -81,8 +82,10 @@ export class WebSocketReceiver extends BaseReceiver<WebSocketHandler> {
      */
     public async start(session: Session<ReceiverMode.WEBSOCKET>): Promise<void> {
         this.session = session;
+        this.session.userClose = false;
         this._isStarted = true;
-        await this.connect();
+        const generation = ++this.lifecycleGeneration;
+        await this.connect(generation);
     }
 
     /**
@@ -90,6 +93,9 @@ export class WebSocketReceiver extends BaseReceiver<WebSocketHandler> {
      */
     public async stop(session?: Session<ReceiverMode.WEBSOCKET>): Promise<void> {
         this._isStarted = false;
+        this.lifecycleGeneration++;
+        this.isReconnect = false;
+        this.retryCount = 0;
         this.disconnect();
     }
 
@@ -117,13 +123,15 @@ export class WebSocketReceiver extends BaseReceiver<WebSocketHandler> {
     /**
      * 建立WebSocket连接
      */
-    private async connect(): Promise<void> {
+    private async connect(generation: number): Promise<void> {
         if (!this.session) {
             throw new Error('Session manager not initialized');
         }
+        if (!this.isLifecycleActive(generation)) return;
 
         try {
             const url = await this.session.getWsUrl();
+            if (!this.isLifecycleActive(generation)) return;
             const ws = this.handler.ws = new WebSocket(url);
 
             this.setupWebSocketConnection(ws);
@@ -472,8 +480,8 @@ export class WebSocketReceiver extends BaseReceiver<WebSocketHandler> {
     /**
      * 重连逻辑
      */
-    private async reconnect(resume: boolean = true): Promise<void> {
-        if (!this.session) return;
+    private async reconnect(resume: boolean = true, generation: number = this.lifecycleGeneration): Promise<void> {
+        if (!this.isLifecycleActive(generation)) return;
 
         this.retryCount++;
         this.session.getBot().logger.error(`[WebSocketReceiver] 连接断开，第${this.retryCount}次重连...`);
@@ -484,14 +492,16 @@ export class WebSocketReceiver extends BaseReceiver<WebSocketHandler> {
         this.session.getBot().logger.debug(`[WebSocketReceiver] 等待 ${delay}ms 后重连`);
 
         await new Promise(resolve => setTimeout(resolve, delay));
+        if (!this.isLifecycleActive(generation)) return;
 
         this.isReconnect = resume;
         try {
-            await this.connect();
+            await this.connect(generation);
         } catch (error) {
             this.session.getBot().logger.error(`[WebSocketReceiver] 重连失败: ${error.message}`);
+            if (!this.isLifecycleActive(generation)) return;
             if (this.retryCount < this.config.maxRetries) {
-                await this.reconnect(resume);
+                await this.reconnect(resume, generation);
             } else {
                 this.session.getBot().logger.error('[WebSocketReceiver] 重连次数达到上限，停止重连');
                 this.session.emit('max_retry_reached');
@@ -506,6 +516,17 @@ export class WebSocketReceiver extends BaseReceiver<WebSocketHandler> {
         this.isClosed = true;
         this.clearTimers();
         this.handler.ws?.close();
+    }
+
+    /**
+     * 判断异步连接任务是否仍属于当前启动周期。
+     * stop() 会推进 lifecycleGeneration，使等待中的旧重连任务失效。
+     */
+    private isLifecycleActive(generation: number): boolean {
+        return this._isStarted
+            && generation === this.lifecycleGeneration
+            && this.session !== null
+            && !this.session.userClose;
     }
 
     /**
