@@ -11,6 +11,19 @@ layout: doc
 
 不要把 `event.id` 同时用于这两个字段。
 
+## 回复序号
+
+SDK 按 `msg_id` 在内存中维护 5 分钟的回复序号。第一次被动回复使用
+`msg_seq = 1`，后续回复依次使用 `2、3……`：
+
+```json
+{ "msg_id": "event.id", "msg_seq": 1 }
+{ "msg_id": "event.id", "msg_seq": 2 }
+```
+
+主动消息不携带 `msg_seq`。如果发送失败，且该序号尚未被后续并发请求占用，
+SDK 会回退序号，使重试继续使用原序号。5 分钟后对应的内存计数自动清除。
+
 ## 接口
 
 ```typescript
@@ -45,7 +58,8 @@ segment.reply(event.id)
 
 ```json
 {
-  "msg_id": "event.id"
+  "msg_id": "event.id",
+  "msg_seq": 1
 }
 ```
 
@@ -74,6 +88,7 @@ segment.reply(event.id, true, event.msg_idx)
 ```json
 {
   "msg_id": "event.id",
+  "msg_seq": 1,
   "message_reference": {
     "message_id": "event.msg_idx"
   }

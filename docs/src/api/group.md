@@ -92,6 +92,9 @@ await bot.messageService.sendGroupMessage(group_id, [
 成功响应中的 `ext_info.ref_idx` 会原样保留。后续群消息事件引用这条 Bot
 消息时，`message_scene.ext` 中的 `ref_msg_idx` 与该值对应。
 
+被动回复的 `msg_seq` 由 SDK 按真实 `msg_id` 自动顺序分配，5 分钟内依次为
+`1、2、3……`；主动消息不发送该字段。
+
 ### 撤回群消息
 
 撤回指定的群消息。

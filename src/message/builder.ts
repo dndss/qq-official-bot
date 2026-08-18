@@ -4,13 +4,12 @@
 
 import { Sendable, MessageElem, ImageElem, VideoElem, AudioElem, FileElem, ReplyElem, AtElem, LinkElem, TextElem, FaceElem, MDElem, KeyboardElem, ButtonElem, EmbedElem, ArkElem } from "@/elements";
 import { md5 } from "@/utils";
-import { randomInt } from "crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export interface MessagePayload {
-  msg_seq: number;
+  msg_seq?: number;
   content: string;
   msg_type?: number;
   msg_id?: string;
@@ -65,7 +64,6 @@ export class MessageBuilder {
     private quote = false
   ) {
     this.messagePayload = {
-      msg_seq: randomInt(1, 1000000),
       content: ''
     };
 
@@ -73,6 +71,7 @@ export class MessageBuilder {
 
     if (source?.id) {
       this.messagePayload.msg_id = source.id;
+      this.messagePayload.msg_seq = 1;
     }
 
     if (quote && source?.msg_idx) {
@@ -181,6 +180,7 @@ export class MessageBuilder {
       this.brief += `<reply,event_id=${elem.data.event_id}>`;
     } else if (elem.data.id) {
       this.messagePayload.msg_id = elem.data.id;
+      this.messagePayload.msg_seq ??= 1;
       this.brief += `<reply,msg_id=${elem.data.id}>`;
       if (elem.data.msg_idx) {
         this.messagePayload.message_reference = {
