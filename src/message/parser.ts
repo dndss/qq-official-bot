@@ -62,7 +62,7 @@ function parseForwardAttachment(index: number, content: string): ForwardMessageA
     const rawType = fields['类型']
     if (!rawType) return
     let type: ForwardMessageAttachment['type'] = 'file'
-    if (rawType.includes('图片')) type = 'image'
+    if (rawType === '动图' || rawType.includes('图片')) type = 'image'
     else if (rawType.includes('视频')) type = 'video'
     else if (rawType.includes('语音') || rawType.includes('音频')) type = 'audio'
 
@@ -75,6 +75,7 @@ function parseForwardAttachment(index: number, content: string): ForwardMessageA
         ...(size ? { width: Number(size[1]), height: Number(size[2]) } : {}),
         ...(fields['大小'] ? { size_text: fields['大小'] } : {}),
         ...(fields['URL'] ? { url: fields['URL'] } : {}),
+        ...(rawType === '动图' ? { animated: true } : {}),
     }
 }
 
