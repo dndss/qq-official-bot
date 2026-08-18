@@ -69,9 +69,17 @@ await bot.messageService.sendGroupMessage(group_id, [
     segment.image('https://example.com/image.jpg')
 ])
 
-// 回复群消息
+// 普通被动回复
 await bot.messageService.sendGroupMessage(group_id, '这是回复', {
-    message_id: original_message_id
+    id: original_message_id
+})
+
+// 引用回复
+await bot.messageService.sendGroupMessage(group_id, '这是引用回复', {
+    id: original_message_id,
+    msg_idx: original_message_msg_idx
+}, {
+    quote: true
 })
 
 // @群成员
@@ -341,7 +349,7 @@ interface GroupMessageEvent extends Message {
     }
     
     // 方法
-    reply(message: Sendable): Promise<any>
+    reply(message: Sendable, quote?: boolean): Promise<any>
 }
 
 // 群成员信息接口

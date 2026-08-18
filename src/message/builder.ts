@@ -61,7 +61,8 @@ export class MessageBuilder {
   constructor(
     private appid: string,
     private isGuild?: boolean,
-    private source?: { id?: string; event_id?: string }
+    private source?: { id?: string; event_id?: string; msg_idx?: string },
+    private quote = false
   ) {
     this.messagePayload = {
       msg_seq: randomInt(1, 1000000),
@@ -72,6 +73,12 @@ export class MessageBuilder {
 
     if (source?.id) {
       this.messagePayload.msg_id = source.id;
+    }
+
+    if (quote && source?.msg_idx) {
+      this.messagePayload.message_reference = {
+        message_id: source.msg_idx
+      };
     }
 
     if (source?.event_id) {
@@ -174,10 +181,13 @@ export class MessageBuilder {
       this.brief += `<reply,event_id=${elem.data.event_id}>`;
     } else if (elem.data.id) {
       this.messagePayload.msg_id = elem.data.id;
-      this.messagePayload.message_reference = {
-        message_id: elem.data.id
-      };
       this.brief += `<reply,msg_id=${elem.data.id}>`;
+      if (elem.data.msg_idx) {
+        this.messagePayload.message_reference = {
+          message_id: elem.data.msg_idx
+        };
+        this.brief += `<reference,msg_idx=${elem.data.msg_idx}>`;
+      }
     }
   }
 

@@ -212,19 +212,23 @@ const channelLink = segment.link('channel_123456')
 
 ### 引用消息段
 
-#### `segment.reply(idOrQuotable: string | Quotable)`
+#### `segment.reply(idOrQuotable: string | Quotable, quote?: boolean, referenceMsgIdx?: string)`
 
-创建回复消息段。
+创建回复消息段。`id` 用于被动回复的 `msg_id`；只有 `quote` 为 `true` 时才会
+使用 `msg_idx` 生成 `message_reference.message_id`。
 
 ```typescript
-// 使用消息ID
+// 普通被动回复，只生成 msg_id
 const replyById = segment.reply('message_123')
 
-// 使用Quotable对象
-const replyByQuotable = segment.reply({
+// 引用回复，同时生成 msg_id 和 message_reference
+const quotedReply = segment.reply({
   id: 'message_123',
-  event_id: 'event_456'
-})
+  msg_idx: 'msg_idx_123'
+}, true)
+
+// 字符串调用也可显式提供引用索引
+const quotedReplyById = segment.reply('message_123', true, 'msg_idx_123')
 ```
 
 ## 使用示例

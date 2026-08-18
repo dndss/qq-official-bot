@@ -451,6 +451,7 @@ type Sendable = string | MessageElem | (string | MessageElem)[]
 interface Quotable {
     id?: string
     event_id?: string
+    msg_idx?: string
 }
 
 // 消息元素接口

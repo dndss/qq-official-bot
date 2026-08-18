@@ -123,7 +123,7 @@ export class MessageService {
      */
     private async sendMessage(endpointPath: string, message: Sendable, source?: Quotable, options: SendOptions = {}): Promise<SendResult> {
         // 构建消息
-        const messageBuilder = new MessageBuilder(this.appid, !endpointPath.startsWith('/v2'), source);
+        const messageBuilder = new MessageBuilder(this.appid, !endpointPath.startsWith('/v2'), source, options.quote);
         const buildResult = await messageBuilder.build(message);
         
         // 处理文件发送
