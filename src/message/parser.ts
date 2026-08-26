@@ -11,6 +11,16 @@ type NumberedSection = {
     body: string
 }
 
+function decodeFaceText(ext: unknown): string | undefined {
+    if (typeof ext !== 'string' || !ext) return
+    try {
+        const payload = JSON.parse(Buffer.from(ext, 'base64').toString('utf8'))
+        return typeof payload.text === 'string' && payload.text ? payload.text : undefined
+    } catch {
+        return
+    }
+}
+
 function splitNumberedSections(content: string, marker: RegExp): NumberedSection[] | undefined {
     const matches = [...content.matchAll(marker)]
     if (!matches.length || content.slice(0, matches[0].index).trim()) return
@@ -303,15 +313,27 @@ export namespace Message {
                     'ark',
                     'embed'
                 ].includes(type)) {
+                    const data = Object.fromEntries(attrs.map((attr: string) => {
+                        const [key, ...values] = attr.split('=')
+                        return [key.toLowerCase(), trimQuote(values.join('='))]
+                    }))
+                    if (type === 'face') {
+                        const text = decodeFaceText(data.ext)
+                        if (text) {
+                            if (!data.id) {
+                                result.push({ type: 'text', data: { text } })
+                                brief += text
+                                continue
+                            }
+                            delete data.ext
+                            data.text = text
+                        }
+                    }
                     result.push({
                         type,
-                        data:Object.fromEntries(attrs.map((attr: string) => {
-                            const [key, ...values] = attr.split('=')
-                            return [key.toLowerCase(), trimQuote(values.join('='))]
-                        })
-                    )
+                        data
                     })
-                    brief += `<${type},${attrs.join(',')}>`
+                    brief += type === 'face' && data.text ? data.text : `<${type},${attrs.join(',')}>`
                 } else {
                     result.push({
                         type: 'text',
