@@ -14,6 +14,7 @@ interface ImageElement {
   file: string | Buffer
   url?: string
   name?: string  // 仅接收消息时有效
+  description?: string  // 附件说明，仅接收消息时有效
 }
 ```
 
@@ -25,6 +26,7 @@ interface ImageElement {
 | file | string \| Buffer | ✅ | 图片文件数据，支持多种格式 |
 | url | string | ❌ | 图片 URL 地址（接收消息时可能存在） |
 | name | string | ❌ | 图片文件名（仅接收消息时有效） |
+| description | string | ❌ | 附件占位标签携带的图片说明（仅接收消息时有效） |
 
 ## 文件格式支持
 

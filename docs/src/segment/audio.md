@@ -14,6 +14,7 @@ interface AudioElement {
   file: string
   url?: string
   name?: string  // 仅接收消息时有效
+  description?: string  // 附件说明，仅接收消息时有效
 }
 ```
 
@@ -25,6 +26,7 @@ interface AudioElement {
 | file | string | ✅ | 音频文件路径、URL 或标识符 |
 | url | string | ❌ | 音频 URL 地址（接收消息时可能存在） |
 | name | string | ❌ | 音频文件名（仅接收消息时有效） |
+| description | string | ❌ | 附件占位标签携带的音频说明（仅接收消息时有效） |
 
 ## 支持的音频格式
 
