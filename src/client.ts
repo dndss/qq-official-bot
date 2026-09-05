@@ -10,6 +10,12 @@ import { Intent } from "./constants";
 import type { ApplicationPlatform } from "@/receivers/middleware";
 import {ReceiverMode,ReceiveModeConfig} from "@/receivers";
 
+function isSelfBotMention(mention: Dict): boolean {
+    return mention?.is_you === true && (
+        mention?.bot === true || mention?.scope === 'single'
+    );
+}
+
 export class Client<T extends ReceiverMode, M extends ApplicationPlatform = ApplicationPlatform> extends EventEmitter {
     readonly request: AxiosInstance;
     readonly sessionManager: Session<T, M>;
@@ -46,9 +52,7 @@ export class Client<T extends ReceiverMode, M extends ApplicationPlatform = Appl
 
         if (typeof payload.content !== 'string' || !Array.isArray(payload.mentions)) return;
 
-        const mention = payload.mentions.find((item: Dict) =>
-            item?.is_you === true && item?.scope === 'single'
-        );
+        const mention = payload.mentions.find(isSelfBotMention);
         const id = mention?.id || mention?.member_openid || mention?.user_openid;
         if (!id) return;
 
@@ -62,9 +66,7 @@ export class Client<T extends ReceiverMode, M extends ApplicationPlatform = Appl
         if (event !== 'GROUP_AT_MESSAGE_CREATE' || !this.self_id) return;
 
         const mentions = Array.isArray(payload.mentions) ? payload.mentions : [];
-        const hasSelfMention = mentions.some((mention: Dict) =>
-            mention?.is_you === true && mention?.scope === 'single'
-        );
+        const hasSelfMention = mentions.some(isSelfBotMention);
         if (hasSelfMention) return;
 
         const selfId = String(this.self_id);
