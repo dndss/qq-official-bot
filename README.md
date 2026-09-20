@@ -192,6 +192,28 @@ await bot.permissionService.updateChannelUserPermissions(channel_id, user_id, 'a
 
 ## 🎯 API 参考
 
+### 底层 OpenAPI
+
+SDK 暂未封装的 QQ OpenAPI 可以通过公开的 Axios 实例 `bot.request` 调用，
+它支持 `get`、`post`、`put`、`patch`、`delete` 和通用请求配置，并会自动添加
+机器人鉴权信息：
+
+```typescript
+const { data } = await bot.request.get('/users/@me')
+
+await bot.request.post(`/v2/groups/${groupOpenid}/messages`, {
+    content: '测试消息',
+    msg_type: 0,
+    msg_seq: 1,
+})
+```
+
+在 QQBot-Plugin 的插件事件中，对应入口为 `e.bot.sdk.request`。只应传入 QQ
+OpenAPI 相对路径；第三方 API 应使用独立的 HTTP 客户端，避免泄露机器人鉴权信息。
+
+完整用法、响应结构及错误处理请参阅
+[底层 OpenAPI 请求文档](./docs/src/api/openapi.md)。
+
 ### 基础 API
 
 | 功能 | 方法 | 参数 | 返回值 |

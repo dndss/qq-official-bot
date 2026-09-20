@@ -44,6 +44,61 @@ await bot.messageService.sendPrivateMessage(user_id, '这是回复', {
 })
 ```
 
+### 流式发送私聊消息
+
+按分片向指定用户发送文本或 Markdown。首片响应的 `id` 必须作为后续分片的
+`stream_msg_id`，`index` 从 `0` 递增，最后一片使用 `input_state: 10`。
+
+**方法名**: `bot.messageService.sendPrivateStreamMessage(userId, payload, options?)` /
+`bot.sendPrivateStreamMessage(userId, payload, options?)`
+
+```typescript
+const first = await bot.sendPrivateStreamMessage(user_id, {
+    input_mode: 'append',
+    input_state: 1,
+    index: 0,
+    content_type: 'markdown',
+    content_raw: '正在生成回答',
+    msg_id: original_message_id,
+    msg_seq: 1
+})
+
+await bot.sendPrivateStreamMessage(user_id, {
+    input_mode: 'append',
+    input_state: 10,
+    index: 1,
+    content_type: 'markdown',
+    content_raw: '，生成完毕。',
+    msg_id: original_message_id,
+    stream_msg_id: first.id,
+    msg_seq: 1
+})
+```
+
+在 C2C 私聊事件中也可以使用 `event.streamReply(payload, options?)`。未显式提供
+`msg_id` 或 `event_id` 时，该方法会使用当前消息的 `message_id`：
+
+```typescript
+bot.on('message.private', async (event) => {
+    const first = await event.streamReply({
+        input_state: 1,
+        index: 0,
+        content_type: 'text',
+        content_raw: '处理中'
+    })
+    await event.streamReply({
+        input_state: 10,
+        index: 1,
+        content_type: 'text',
+        content_raw: '处理完成',
+        stream_msg_id: first.id
+    })
+})
+```
+
+该方法是 QQ OpenAPI 请求体的薄封装，不会自动维护 `index`、`stream_msg_id` 或
+`msg_seq`。`msg_id` 与 `event_id` 应二选一。
+
 ### 撤回私聊消息
 
 撤回指定的私聊消息。

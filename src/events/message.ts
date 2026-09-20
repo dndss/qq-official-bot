@@ -1,4 +1,13 @@
-import {Announce, Bot, EmojiType, PinsMessage, Sendable} from "@";
+import {
+    Announce,
+    Bot,
+    EmojiType,
+    PinsMessage,
+    PrivateStreamMessagePayload,
+    PrivateStreamMessageResult,
+    PrivateStreamSendOptions,
+    Sendable
+} from "@";
 import {Message} from "@/message/parser"
 import {EventParser} from "@/events";
 
@@ -19,6 +28,23 @@ export class PrivateMessageEvent extends Message implements MessageEvent {
         return this.sub_type === 'direct' ?
             this.bot.sendDirectMessage(this.guild_id, message, this, {quote}) :
             this.bot.sendPrivateMessage(this.user_id, message, this, {quote})
+    }
+
+    /**
+     * 流式回复 C2C 私聊消息。调用方负责维护 index 和 stream_msg_id。
+     * 未提供 msg_id/event_id 时，默认使用当前消息 ID 作为 msg_id。
+     */
+    async streamReply(
+        payload: PrivateStreamMessagePayload,
+        options: PrivateStreamSendOptions = {}
+    ): Promise<PrivateStreamMessageResult> {
+        if (this.sub_type === 'direct')
+            throw new Error('频道私信不支持 C2C 流式消息接口')
+
+        const requestPayload = { ...payload };
+        if (!requestPayload.msg_id && !requestPayload.event_id && this.message_id)
+            requestPayload.msg_id = this.message_id;
+        return this.bot.sendPrivateStreamMessage(this.user_id, requestPayload, options)
     }
 }
 export class MessageAuditEvent{

@@ -24,6 +24,8 @@ export default defineConfig({
                 text: 'API',
                 activeMatch: '/api/',
                 items: [
+                    { text: '底层 OpenAPI', link: '/api/openapi' },
+                    { text: '公共接口', link: '/api/common' },
                     { text: '频道', link: '/api/guild' },
                     { text: '子频道', link: '/api/channel' },
                     { text: '私信', link: '/api/direct' },
@@ -72,6 +74,8 @@ export default defineConfig({
             {
                 text: '接口分组',
                 items: [
+                    { text: '底层 OpenAPI', link: '/api/openapi' },
+                    { text: '公共接口', link: '/api/common' },
                     { text: '频道', link: '/api/guild' },
                     { text: '子频道', link: '/api/channel' },
                     { text: '私信', link: '/api/direct' },

@@ -8,7 +8,13 @@ import { Sendable, Quotable } from '@/elements'
 import { MessageBuilder, BuildResult, ChunkedUploader } from '@/message'
 import { Message } from '@/message/parser'
 import { MessageAuditEvent } from '@/events'
-import { DMS, EmojiType } from '@/types'
+import {
+    DMS,
+    EmojiType,
+    PrivateStreamMessagePayload,
+    PrivateStreamMessageResult,
+    PrivateStreamSendOptions
+} from '@/types'
 
 export interface SendOptions {
     quote?: boolean;
@@ -148,6 +154,28 @@ export class MessageService {
      */
     async sendPrivateMessage(userId: string, message: Sendable, source?: Quotable, options: SendOptions = {}): Promise<SendResult> {
         return await this.sendMessage(`/v2/users/${userId}`, message, source, options);
+    }
+
+    /**
+     * 流式发送私聊消息。
+     * 调用方负责维护 index，并将首片响应 id 作为后续分片的 stream_msg_id。
+     */
+    async sendPrivateStreamMessage(
+        userId: string,
+        payload: PrivateStreamMessagePayload,
+        options: PrivateStreamSendOptions = {}
+    ): Promise<PrivateStreamMessageResult> {
+        const { data: result } = await this.request.post<PrivateStreamMessageResult>(
+            `/v2/users/${userId}/stream_messages`,
+            payload,
+            {
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                timeout: options.timeout ?? 10000
+            }
+        );
+        return result;
     }
 
     /**

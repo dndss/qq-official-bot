@@ -16,7 +16,10 @@ import {
     ScheduleInfo,
     Thread,
     ThreadInfo,
-    UpdatePermissionParams
+    UpdatePermissionParams,
+    PrivateStreamMessagePayload,
+    PrivateStreamMessageResult,
+    PrivateStreamSendOptions
 } from "@/types";
 import { Quotable, Sendable } from "@/elements";
 import { UnsupportedMethodError } from "./constants";
@@ -553,6 +556,19 @@ export class Bot<T extends ReceiverMode = ReceiverMode, M extends ApplicationPla
      */
     async sendPrivateMessage(user_id: string, message: Sendable, source?: Quotable, options: SendOptions = {}) {
         return this.messageService.sendPrivateMessage(user_id, message, source, options);
+    }
+    /**
+     * 流式发送私聊消息
+     * @param user_id 用户 OpenID
+     * @param payload 官方流式消息请求体
+     * @param options 请求选项
+     */
+    async sendPrivateStreamMessage(
+        user_id: string,
+        payload: PrivateStreamMessagePayload,
+        options: PrivateStreamSendOptions = {}
+    ): Promise<PrivateStreamMessageResult> {
+        return this.messageService.sendPrivateStreamMessage(user_id, payload, options);
     }
     /**
      * 撤回私聊消息
