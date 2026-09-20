@@ -1,0 +1,74 @@
+name: Sync SDK to downstream repositories
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "lib/**"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-downstream-repositories
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    name: Sync to ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Yunzai QQBot Plugin
+            repository: dndss/Yunzai-QQBot-Plugin
+            checkout_path: plugin
+            target_path: lib/modules/qq-official-bot/lib
+          - name: QQBot Web
+            repository: dndss/qqbot-web
+            checkout_path: qqbot-web
+            target_path: packages/qq-official-bot/lib
+
+    steps:
+      - name: Checkout SDK
+        uses: actions/checkout@v4
+        with:
+          path: sdk
+
+      - name: Checkout downstream repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ matrix.repository }}
+          ref: main
+          token: ${{ secrets.PLUGIN_REPO_TOKEN }}
+          path: ${{ matrix.checkout_path }}
+
+      - name: Sync compiled SDK artifacts
+        shell: bash
+        run: |
+          rsync -av --delete \
+            "sdk/lib/" \
+            "${{ matrix.checkout_path }}/${{ matrix.target_path }}/"
+
+      - name: Commit and push changes
+        working-directory: ${{ matrix.checkout_path }}
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          TARGET_PATH: ${{ matrix.target_path }}
+        shell: bash
+        run: |
+          if [ -z "$(git status --porcelain -- "$TARGET_PATH")" ]; then
+            echo "No SDK changes to sync."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A -- "$TARGET_PATH"
+          git commit -m "chore: sync qq-official-bot (${SOURCE_SHA:0:7})"
+          git push origin main
