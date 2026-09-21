@@ -10,7 +10,7 @@ import {GatewayInfo} from "@/types";
 export interface AuthConfig {
   appid: string;
   secret: string;
-  /** 获取 access token 的完整 URL，默认 https://bots.qq.com/app/getAppAccessToken */
+  /** 获取 access token 的完整 URL，默认 https://api.bot.qq.com/app/getAppAccessToken */
   accessTokenUrl?: string;
   /** 获取网关信息的 URL 或路径，响应中的 url 为 WebSocket 地址；默认 /gateway/bot */
   gatewayUrl?: string;
@@ -31,7 +31,7 @@ export interface TokenInfo {
  * 专门负责处理token获取、刷新和网关信息获取
  */
 export class Auth {
-  static readonly DEFAULT_ACCESS_TOKEN_URL = 'https://bots.qq.com/app/getAppAccessToken';
+  static readonly DEFAULT_ACCESS_TOKEN_URL = 'https://api.bot.qq.com/app/getAppAccessToken';
   static readonly DEFAULT_GATEWAY_URL = '/gateway/bot';
   private static readonly MIN_REFRESH_DELAY_MS = 1000;
   private static readonly FALLBACK_REFRESH_RATIO = 0.5;

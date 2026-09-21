@@ -19,7 +19,7 @@ interface Config<T extends ReceiverMode, M extends ApplicationPlatform> {
     mode: T                                 // 连接模式
 
     // 可选项
-    sandbox?: boolean                       // 是否使用沙箱环境，默认 false
+    sandbox?: boolean                       // 是否使用沙箱环境，默认 false；官方接口域名统一为 api.bot.qq.com
     logLevel?: LogLevel                     // 日志级别，默认 'info'
     removeAt?: boolean                      // 是否移除消息中的 @机器人，默认 false
     maxRetry?: number                       // 最大重连次数，默认 10
@@ -48,7 +48,7 @@ interface Config<T extends ReceiverMode, M extends ApplicationPlatform> {
 | `secret` | `string` | ✅ | QQ 机器人的 App Secret | - |
 | `intents` | `Intent[]` | ✅ | 事件订阅列表 | - |
 | `mode` | `ReceiverMode` | ✅ | 连接模式 | - |
-| `sandbox` | `boolean` | ❌ | 是否使用沙箱环境 | `false` |
+| `sandbox` | `boolean` | ❌ | 是否使用沙箱环境（官方接口域名统一为 `api.bot.qq.com`） | `false` |
 | `logLevel` | `LogLevel` | ❌ | 日志输出级别 | `'info'` |
 | `removeAt` | `boolean` | ❌ | 自动移除消息中的@机器人 | `false` |
 | `maxRetry` | `number` | ❌ | 最大重连次数 | `10` |
@@ -82,7 +82,7 @@ const proxiedBot = new Bot({
 
 | 属性名 | 类型 | 必填 | 描述 | 默认值 |
 |-------|------|------|------|--------|
-| `accessTokenUrl` | `string` | ❌ | 获取 access token 的完整 URL | `https://bots.qq.com/app/getAppAccessToken` |
+| `accessTokenUrl` | `string` | ❌ | 获取 access token 的完整 URL | `https://api.bot.qq.com/app/getAppAccessToken` |
 | `gatewayUrl` | `string` | ❌ | 获取网关信息的 URL 或路径；响应中的 `url` 为 WebSocket 连接地址 | `/gateway/bot` |
 | `heartbeatInterval` | `number` | ❌ | 心跳间隔(ms) | `45000` |
 | `maxRetries` | `number` | ❌ | 连接重试次数 | `10` |
@@ -94,7 +94,7 @@ WebSocket 连接分三步，其中前两步可通过配置覆盖默认地址：
 
 | 步骤 | 默认行为 | 自定义配置 |
 |------|----------|------------|
-| 1. 获取 token | `POST https://bots.qq.com/app/getAppAccessToken` | `accessTokenUrl` |
+| 1. 获取 token | `POST https://api.bot.qq.com/app/getAppAccessToken` | `accessTokenUrl` |
 | 2. 获取 gateway | `GET /gateway/bot`（相对 API 根地址） | `gatewayUrl` |
 | 3. 建立 WebSocket | 使用 gateway 响应中的 `url` 字段 | 不可配置，由 gateway 返回 |
 
