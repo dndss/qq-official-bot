@@ -1,4 +1,4 @@
-import {Bot} from "@";
+import {Bot} from "@/index";
 
 export class Contactable {
     guild_id?: string

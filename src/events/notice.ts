@@ -1,4 +1,4 @@
-import {AuditType, Bot, Dict, Emoji, ReactionTargetType} from "@";
+import {AuditType, Bot, Dict, Emoji, ReactionTargetType} from "@/index";
 import {EventParser} from "@/events/index";
 
 export class NoticeEvent {

@@ -1,5 +1,5 @@
 import type { ForwardMessageAttachment, ForwardMessageData, ForwardMessageNode, MessageElem, Sendable } from "@/elements";
-import { Bot } from "@";
+import { Bot } from "@/index";
 import type { Dict } from "@/types";
 import { trimQuote } from "@/utils/string";
 import type { User } from "@/entries/user";

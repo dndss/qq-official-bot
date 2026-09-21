@@ -1,5 +1,5 @@
 import {GroupMessageEvent, GuildMessageEvent, MessageAuditEvent, MessageEvent, PrivateMessageEvent} from "./message";
-import {Bot, Dict} from "@";
+import {Bot, Dict} from "@/index";
 import {
     ActionNoticeEvent,
     FormAuditNoticeEvent,

@@ -2,13 +2,13 @@
  * 频道服务类 - 负责所有频道相关的API操作
  */
 import { AxiosResponse, AxiosInstance } from 'axios'
-import { Guild } from '@'
+import { Guild } from '@/index'
 import {
     RoleCreateParam,
     RoleUpdateParam,
     ApiBaseInfo,
     ApiPermissionDemand
-} from '@'
+} from '@/index'
 
 export class GuildService {
     constructor(private request: AxiosInstance) {}

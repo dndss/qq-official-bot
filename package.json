@@ -17,7 +17,7 @@
     },
     "scripts": {
         "start": "node .",
-        "compile": "tsc --project tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+        "compile": "tsc --project tsconfig.build.json && tsc-alias -p tsconfig.build.json && node scripts/verify-build.js",
         "dtsc": "dtsc --project tsconfig.dtsc.json",
         "clean": "rm -rf ./lib",
         "build": "npm run compile && npm run dtsc",

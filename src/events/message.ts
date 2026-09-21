@@ -7,7 +7,7 @@ import {
     PrivateStreamMessageResult,
     PrivateStreamSendOptions,
     Sendable
-} from "@";
+} from "@/index";
 import {Message} from "@/message/parser"
 import {EventParser} from "@/events";
 
