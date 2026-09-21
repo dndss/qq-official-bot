@@ -10,7 +10,7 @@ layout: doc
 
 SDK 会为请求自动配置：
 
-- 与 `sandbox` 配置对应的 QQ OpenAPI 基础地址；
+- QQ OpenAPI 基础地址 `https://api.bot.qq.com`；
 - `Authorization: QQBot <access_token>`；
 - `X-Union-Appid`；
 - `timeout` 配置和 SDK 的 OpenAPI 错误处理。

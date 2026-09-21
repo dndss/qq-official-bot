@@ -46,7 +46,6 @@ import { Bot, ReceiverMode } from 'qq-official-bot'
 const bot = new Bot({
     appid: 'your_app_id',           // QQ 机器人的 App ID
     secret: 'your_app_secret',      // QQ 机器人的 App Secret
-    sandbox: false,                 // 是否为沙箱环境
     removeAt: true,                 // 自动移除消息中的 @机器人
     logLevel: 'info',               // 日志级别
     maxRetry: 10,                   // 最大重连次数
@@ -256,7 +255,6 @@ OpenAPI 相对路径；第三方 API 应使用独立的 HTTP 客户端，避免�
 interface BotConfig {
     appid: string              // 机器人 App ID
     secret: string             // 机器人 App Secret
-    sandbox?: boolean          // 是否为沙箱环境，默认 false
     removeAt?: boolean         // 是否移除消息中的 @，默认 false
     logLevel?: string          // 日志级别，默认 'info'
     maxRetry?: number          // 最大重连次数，默认 10

@@ -19,7 +19,6 @@ interface Config<T extends ReceiverMode, M extends ApplicationPlatform> {
     mode: T                                 // 连接模式
 
     // 可选项
-    sandbox?: boolean                       // 是否使用沙箱环境，默认 false；官方接口域名统一为 api.bot.qq.com
     logLevel?: LogLevel                     // 日志级别，默认 'info'
     removeAt?: boolean                      // 是否移除消息中的 @机器人，默认 false
     maxRetry?: number                       // 最大重连次数，默认 10
@@ -48,7 +47,6 @@ interface Config<T extends ReceiverMode, M extends ApplicationPlatform> {
 | `secret` | `string` | ✅ | QQ 机器人的 App Secret | - |
 | `intents` | `Intent[]` | ✅ | 事件订阅列表 | - |
 | `mode` | `ReceiverMode` | ✅ | 连接模式 | - |
-| `sandbox` | `boolean` | ❌ | 是否使用沙箱环境（官方接口域名统一为 `api.bot.qq.com`） | `false` |
 | `logLevel` | `LogLevel` | ❌ | 日志输出级别 | `'info'` |
 | `removeAt` | `boolean` | ❌ | 自动移除消息中的@机器人 | `false` |
 | `maxRetry` | `number` | ❌ | 最大重连次数 | `10` |
@@ -200,30 +198,6 @@ type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal'
 | `error` | 错误信息 |
 | `fatal` | 致命错误 |
 
-## 🌍 环境配置
-
-### 沙箱与生产环境
-
-```typescript
-// 开发环境（沙箱）
-const devBot = new Bot({
-    appid: 'your_app_id',
-    secret: 'your_app_secret',
-    sandbox: true,              // 使用沙箱环境
-    logLevel: 'debug',          // 详细日志
-    // ...其他配置
-})
-
-// 生产环境
-const prodBot = new Bot({
-    appid: 'your_app_id',
-    secret: 'your_app_secret',
-    sandbox: false,             // 使用生产环境
-    logLevel: 'info',           // 普通日志
-    // ...其他配置
-})
-```
-
 ## ⚡ 最佳实践
 
 ### 1. 使用环境变量
@@ -232,7 +206,6 @@ const prodBot = new Bot({
 // .env 文件
 QQ_BOT_APPID=your_app_id
 QQ_BOT_SECRET=your_app_secret
-QQ_BOT_SANDBOX=false
 # 可选：WebSocket 模式自定义网关（留空则使用官方默认地址）
 QQ_BOT_ACCESS_TOKEN_URL=https://your-proxy.example.com/app/getAppAccessToken
 QQ_BOT_GATEWAY_URL=https://your-proxy.example.com/gateway/bot
@@ -241,7 +214,6 @@ QQ_BOT_GATEWAY_URL=https://your-proxy.example.com/gateway/bot
 const bot = new Bot({
     appid: process.env.QQ_BOT_APPID!,
     secret: process.env.QQ_BOT_SECRET!,
-    sandbox: process.env.QQ_BOT_SANDBOX === 'true',
     mode: ReceiverMode.WEBSOCKET,
     intents: ['GUILD_MESSAGES'],
     ...(process.env.QQ_BOT_ACCESS_TOKEN_URL && {
@@ -263,7 +235,6 @@ const config = defineConfig({
     secret: 'your_app_secret',
     mode: ReceiverMode.WEBSOCKET,
     intents: ['GUILD_MESSAGES', 'DIRECT_MESSAGE'],
-    sandbox: false,
     logLevel: 'info',
 })
 
@@ -278,7 +249,6 @@ const isDev = process.env.NODE_ENV === 'development'
 const bot = new Bot({
     appid: 'your_app_id',
     secret: 'your_app_secret',
-    sandbox: isDev,
     logLevel: isDev ? 'debug' : 'info',
     maxRetry: isDev ? 3 : 10,
     mode: ReceiverMode.WEBSOCKET,

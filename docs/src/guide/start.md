@@ -51,7 +51,6 @@ import { Bot, ReceiverMode } from 'qq-official-bot'
 const bot = new Bot({
     appid: 'your_app_id',           // QQ 机器人的 App ID
     secret: 'your_app_secret',      // QQ 机器人的 App Secret
-    sandbox: false,                 // 是否为沙箱环境
     removeAt: true,                 // 自动移除消息中的 @机器人
     logLevel: 'info',               // 日志级别
     maxRetry: 10,                   // 最大重连次数
@@ -103,7 +102,7 @@ const bot = new Bot({
 2. 携带 `Authorization: QQBot <token>` 请求 `gatewayUrl`
 3. 使用 gateway 响应中的 `url` 建立 WebSocket 连接
 
-> 官方接口调用统一使用 `https://api.bot.qq.com`。`gatewayUrl` 为相对路径时，会拼接到该 API 根地址；`sandbox` 配置字段仍保留用于兼容旧配置。
+> 官方接口调用统一使用 `https://api.bot.qq.com`。`gatewayUrl` 为相对路径时，会拼接到该 API 根地址。
 
 ### Webhook 连接模式
 
@@ -113,7 +112,6 @@ import { Bot, ReceiverMode } from 'qq-official-bot'
 const bot = new Bot({
     appid: 'your_app_id',
     secret: 'your_app_secret',
-    sandbox: false,
     intents: ['GUILD_MESSAGES', 'DIRECT_MESSAGE'],
     mode: ReceiverMode.WEBHOOK,
     port: 3000,                     // Webhook 监听端口
@@ -136,7 +134,6 @@ import express from 'express'
 const bot = new Bot({
     appid: 'your_app_id',
     secret: 'your_app_secret',
-    sandbox: false,
     intents: ['GUILD_MESSAGES'],
     mode: ReceiverMode.MIDDLEWARE,
     application: ApplicationPlatform.EXPRESS, // 或 ApplicationPlatform.KOA
@@ -235,7 +232,6 @@ node bot.js
 1. **凭证安全**: 请妥善保管你的 `appid` 和 `secret`，不要在代码中硬编码
 2. **权限配置**: 确保在 QQ 开放平台配置了正确的机器人权限
 3. **事件订阅**: 根据你的需求配置 `intents` 数组
-4. **环境区分**: 开发时使用 `sandbox: true`，生产环境使用 `sandbox: false`
 
 ## 📚 下一步
 

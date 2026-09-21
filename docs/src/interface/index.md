@@ -86,7 +86,6 @@ namespace Bot {
     type Config<T extends ReceiverMode, M extends ApplicationPlatform = ApplicationPlatform> = {
         appid: string              // 机器人 APP ID
         secret: string             // 机器人密钥
-        sandbox?: boolean          // 是否为沙箱环境
         timeout?: number           // 请求超时时间（毫秒）
         maxRetry?: number          // 最大重试次数
         removeAt?: boolean         // 是否移除 @ 提及

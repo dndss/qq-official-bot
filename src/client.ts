@@ -33,7 +33,6 @@ export class Client<T extends ReceiverMode, M extends ApplicationPlatform = Appl
     constructor(public readonly config: Client.Config<T, M>) {
         super();
         this.request = axios.create({
-            // Official API endpoints now share a single domain for production and sandbox.
             baseURL: 'https://api.bot.qq.com',
             timeout: config.timeout ?? 5000,
             headers: {
@@ -243,7 +242,6 @@ export namespace Client {
     export type Config<T extends ReceiverMode=ReceiverMode, M extends ApplicationPlatform = ApplicationPlatform> = {
         appid: string;
         secret: string;
-        sandbox?: boolean;
         timeout?: number;
         maxRetry?: number;
         dataDir?: string;

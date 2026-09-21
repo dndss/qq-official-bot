@@ -182,7 +182,6 @@ const config = defineConfig({
     secret: 'your_app_secret',
     mode: ReceiverMode.WEBSOCKET,
     intents: ['GUILD_MESSAGES'],
-    sandbox: false,
     logLevel: 'info',
 })
 
