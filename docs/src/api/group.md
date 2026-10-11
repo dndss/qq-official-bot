@@ -44,7 +44,7 @@ console.log(state.member_role) // member、admin 或 owner
 
 向指定群聊发送消息。
 
-**方法名**: `bot.messageService.sendGroupMessage(groupId, message, source?)` / `bot.sendGroupMessage(groupId, message, source?)`
+**方法名**: `bot.messageService.sendGroupMessage(groupId, message, source?, options?)` / `bot.sendGroupMessage(groupId, message, source?, options?)`
 
 **参数**:
 | 参数名 | 类型 | 必填 | 描述 |
@@ -52,6 +52,7 @@ console.log(state.member_role) // member、admin 或 owner
 | `groupId` | `string` | ✅ | 群 ID |
 | `message` | `Sendable` | ✅ | 消息内容 |
 | `source` | `Quotable` | ❌ | 引用消息 |
+| `options` | `SendOptions` | ❌ | 发送超时与取消信号设置 |
 
 ```typescript
 // 使用服务模块（推荐）
@@ -92,9 +93,15 @@ await bot.messageService.sendGroupMessage(group_id, [
 成功响应中的 `ext_info.ref_idx` 会原样保留。后续群消息事件引用这条 Bot
 消息时，`message_scene.ext` 中的 `ref_msg_idx` 与该值对应。
 
-被动回复的 `msg_seq` 由 SDK 按真实 `msg_id` 自动顺序分配。遇到
-`40054005` 时会在 `1～5` 内递增重试；遇到 `40034005` 时会移除被动回复
-字段并转为主动消息。引用回复的被动发送失败时也会保留引用并转主动重试。
+被动回复的 `msg_seq` 由 SDK 按真实 `msg_id` 自动顺序分配。
+消息发送接口失败时，SDK 直接抛出原始错误，包括 `40054005`（序号冲突）、
+`40034005`（消息已过期）和引用回复失败，不自动重试或转为主动消息。
+
+`options.timeout` 默认为 `10000` 毫秒，设为 `0` 时取消单次请求超时。
+`options.signal` 可取消发送请求和文件上传；取消后停止正在进行的上传重试。
+SDK 不再提供 `options.fallbackToActive`。被动回复截止时间、重试和主动消息兜底
+由调用方负责。例如调用方可从原消息时间计算 5 分钟截止时间，在截止时取消
+被动发送，再单独尝试一次主动发送。
 
 ### 撤回群消息
 

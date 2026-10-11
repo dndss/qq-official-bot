@@ -3,6 +3,7 @@ import { createReadStream } from 'node:fs';
 import { open, stat } from 'node:fs/promises';
 import * as path from 'node:path';
 import type { AxiosInstance } from 'axios';
+import { setTimeout as wait } from 'node:timers/promises';
 
 export type MediaFileType = 1 | 2 | 3 | 4;
 
@@ -22,6 +23,7 @@ export interface ChunkedUploadProgress {
 export interface ChunkedUploadOptions {
   fileName?: string;
   onProgress?: (progress: ChunkedUploadProgress) => void;
+  signal?: AbortSignal;
 }
 
 interface UploadPart {
@@ -76,12 +78,13 @@ export class ChunkedUploader {
     fileType: MediaFileType,
     options: ChunkedUploadOptions = {}
   ): Promise<MediaUploadResult> {
+    options.signal?.throwIfAborted();
     const fileStat = await stat(filePath);
     if (!fileStat.isFile()) throw new Error(`Invalid upload file: ${filePath}`);
 
     const fileSize = fileStat.size;
     const fileName = sanitizeFileName(options.fileName || path.basename(filePath));
-    const hashes = await computeFileHashes(filePath, fileSize);
+    const hashes = await computeFileHashes(filePath, fileSize, options.signal);
 
     let prepared: UploadPrepareResponse;
     try {
@@ -93,7 +96,7 @@ export class ChunkedUploader {
           file_size: fileSize,
           ...hashes
         },
-        { timeout: REQUEST_TIMEOUT }
+        { timeout: REQUEST_TIMEOUT, signal: options.signal }
       );
       prepared = data;
     } catch (error) {
@@ -125,6 +128,7 @@ export class ChunkedUploader {
     let completedParts = 0;
     let uploadedBytes = 0;
     const tasks = prepared.parts.map(part => async () => {
+      options.signal?.throwIfAborted();
       const partIndex = Number(part.index);
       const offset = (partIndex - 1) * blockSize;
       const partSize = Number(part.block_size) || blockSize;
@@ -135,14 +139,15 @@ export class ChunkedUploader {
 
       const chunk = await readFileChunk(filePath, offset, length);
       const md5 = createHash('md5').update(chunk).digest('hex');
-      await putToPresignedUrl(part.presigned_url, chunk);
+      await putToPresignedUrl(part.presigned_url, chunk, options.signal);
       await this.finishPart(
         endpointPath,
         prepared.upload_id,
         partIndex,
         chunk.length,
         md5,
-        retryTimeout
+        retryTimeout,
+        options.signal
       );
 
       completedParts++;
@@ -156,7 +161,7 @@ export class ChunkedUploader {
     });
 
     await runWithConcurrency(tasks, concurrency);
-    return this.completeUpload(endpointPath, prepared.upload_id);
+    return this.completeUpload(endpointPath, prepared.upload_id, options.signal);
   }
 
   private async finishPart(
@@ -165,7 +170,8 @@ export class ChunkedUploader {
     partIndex: number,
     blockSize: number,
     md5: string,
-    retryTimeout: number
+    retryTimeout: number,
+    signal?: AbortSignal
   ): Promise<void> {
     const body = {
       upload_id: uploadId,
@@ -177,20 +183,23 @@ export class ChunkedUploader {
     let normalAttempts = 0;
 
     while (true) {
+      signal?.throwIfAborted();
       try {
         await this.request.post(`${endpointPath}/upload_part_finish`, body, {
-          timeout: REQUEST_TIMEOUT
+          timeout: REQUEST_TIMEOUT,
+          signal
         });
         return;
       } catch (error) {
+        signal?.throwIfAborted();
         if (getErrorCode(error) === PART_FINISH_RETRYABLE_CODE) {
           if (Date.now() - startedAt >= retryTimeout) throw error;
-          await delay(1000);
+          await delay(1000, signal);
           continue;
         }
 
         if (normalAttempts >= PART_FINISH_MAX_RETRIES) throw error;
-        await delay(1000 * Math.pow(2, normalAttempts));
+        await delay(1000 * Math.pow(2, normalAttempts), signal);
         normalAttempts++;
       }
     }
@@ -198,21 +207,24 @@ export class ChunkedUploader {
 
   private async completeUpload(
     endpointPath: string,
-    uploadId: string
+    uploadId: string,
+    signal?: AbortSignal
   ): Promise<MediaUploadResult> {
     let lastError: unknown;
     for (let attempt = 0; attempt <= COMPLETE_UPLOAD_MAX_RETRIES; attempt++) {
+      signal?.throwIfAborted();
       try {
         const { data } = await this.request.post<MediaUploadResult>(
           `${endpointPath}/files`,
           { upload_id: uploadId },
-          { timeout: REQUEST_TIMEOUT }
+          { timeout: REQUEST_TIMEOUT, signal }
         );
         return data;
       } catch (error) {
+        signal?.throwIfAborted();
         lastError = error;
         if (attempt < COMPLETE_UPLOAD_MAX_RETRIES) {
-          await delay(2000 * Math.pow(2, attempt));
+          await delay(2000 * Math.pow(2, attempt), signal);
         }
       }
     }
@@ -220,14 +232,14 @@ export class ChunkedUploader {
   }
 }
 
-async function computeFileHashes(filePath: string, fileSize: number): Promise<FileHashes> {
+async function computeFileHashes(filePath: string, fileSize: number, signal?: AbortSignal): Promise<FileHashes> {
   return new Promise((resolve, reject) => {
     const md5 = createHash('md5');
     const sha1 = createHash('sha1');
     const md5First10m = createHash('md5');
     const needsPartialHash = fileSize > MD5_10M_SIZE;
     let processed = 0;
-    const stream = createReadStream(filePath);
+    const stream = createReadStream(filePath, { signal });
 
     stream.on('data', chunk => {
       const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
@@ -265,9 +277,10 @@ async function readFileChunk(filePath: string, offset: number, length: number): 
   }
 }
 
-async function putToPresignedUrl(url: string, data: Buffer): Promise<void> {
+async function putToPresignedUrl(url: string, data: Buffer, signal?: AbortSignal): Promise<void> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= PART_UPLOAD_MAX_RETRIES; attempt++) {
+    signal?.throwIfAborted();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), PART_UPLOAD_TIMEOUT);
     try {
@@ -279,7 +292,7 @@ async function putToPresignedUrl(url: string, data: Buffer): Promise<void> {
         method: 'PUT',
         body: new Blob([arrayBuffer]),
         headers: { 'Content-Length': String(data.length) },
-        signal: controller.signal
+        signal: signal ? AbortSignal.any([signal, controller.signal]) : controller.signal
       });
       if (!response.ok) {
         const body = await response.text().catch(() => '');
@@ -287,9 +300,10 @@ async function putToPresignedUrl(url: string, data: Buffer): Promise<void> {
       }
       return;
     } catch (error) {
+      signal?.throwIfAborted();
       lastError = error;
       if (attempt < PART_UPLOAD_MAX_RETRIES) {
-        await delay(1000 * Math.pow(2, attempt));
+        await delay(1000 * Math.pow(2, attempt), signal);
       }
     } finally {
       clearTimeout(timer);
@@ -329,6 +343,6 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  await wait(ms, undefined, { signal });
 }

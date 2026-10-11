@@ -20,6 +20,7 @@ export interface SendOptions {
     quote?: boolean;
     timeout?: number;
     retries?: number;
+    signal?: AbortSignal;
 }
 
 export interface SendResult {
@@ -33,9 +34,6 @@ export interface SendResult {
 }
 
 const REPLY_SEQUENCE_TTL = 5 * 60 * 1000;
-const REPLY_SEQUENCE_DUPLICATED = 40054005;
-const REPLY_MESSAGE_EXPIRED = 40034005;
-const MAX_REPLY_SEQUENCE = 5;
 
 interface ReplySequenceEntry {
     sequence: number;
@@ -75,21 +73,6 @@ export class MessageService {
         if (!current || current.sequence !== sequence) return;
         if (sequence === 1) this.replySequences.delete(messageId);
         else current.sequence -= 1;
-    }
-
-    private advanceReplySequence(messageId: string, sequence: number): void {
-        const current = this.replySequences.get(messageId);
-        if (current && current.sequence < sequence) current.sequence = sequence;
-    }
-
-    private getOpenApiErrorCode(error: unknown): number | undefined {
-        const value = Number(
-            (error as any)?.err_code ??
-            (error as any)?.code ??
-            (error as any)?.response?.data?.err_code ??
-            (error as any)?.response?.data?.code
-        );
-        return Number.isSafeInteger(value) ? value : undefined;
     }
 
     /**
@@ -205,9 +188,11 @@ export class MessageService {
      * 核心发送消息方法
      */
     private async sendMessage(endpointPath: string, message: Sendable, source?: Quotable, options: SendOptions = {}): Promise<SendResult> {
+        options.signal?.throwIfAborted();
         // 构建消息
         const messageBuilder = new MessageBuilder(this.appid, !endpointPath.startsWith('/v2'), source, options.quote);
         const buildResult = await messageBuilder.build(message);
+        options.signal?.throwIfAborted();
 
         const replyMessageId = buildResult.messagePayload.msg_id;
         let replySequence: number | undefined;
@@ -219,49 +204,12 @@ export class MessageService {
         try {
             // 处理文件发送
             if (buildResult.isFile) {
-                const uploaded = await this.uploadFile(endpointPath, buildResult);
+                const uploaded = await this.uploadFile(endpointPath, buildResult, options);
                 buildResult.messagePayload.media = { file_info: uploaded.file_info };
             }
 
-            try {
-                // 发送普通消息
-                return await this.sendRegularMessage(endpointPath, buildResult, options);
-            } catch (initialError) {
-                let error = initialError;
-
-                // msg_seq 被腾讯侧占用时，在被动回复允许的 1～5 范围内递增重试。
-                while (
-                    replyMessageId &&
-                    replySequence !== undefined &&
-                    replySequence < MAX_REPLY_SEQUENCE &&
-                    this.getOpenApiErrorCode(error) === REPLY_SEQUENCE_DUPLICATED
-                ) {
-                    replySequence += 1;
-                    this.advanceReplySequence(replyMessageId, replySequence);
-                    buildResult.messagePayload.msg_seq = replySequence;
-                    try {
-                        return await this.sendRegularMessage(endpointPath, buildResult, options);
-                    } catch (retryError) {
-                        error = retryError;
-                    }
-                }
-
-                const isQuotedReply = Boolean(buildResult.messagePayload.message_reference);
-                const isExpiredReply = this.getOpenApiErrorCode(error) === REPLY_MESSAGE_EXPIRED;
-
-                // 引用回复被动发送失败，或 msg_id 已过期时，移除被动回复凭据后转主动发送。
-                // message_reference 会被保留，因此引用回复仍显示原引用。
-                if (replyMessageId && (isQuotedReply || isExpiredReply)) {
-                    if (replySequence !== undefined)
-                        this.releaseReplySequence(replyMessageId, replySequence);
-                    replySequence = undefined;
-                    delete buildResult.messagePayload.msg_id;
-                    delete buildResult.messagePayload.msg_seq;
-                    return await this.sendRegularMessage(endpointPath, buildResult, options);
-                }
-
-                throw error;
-            }
+            // 发送普通消息；重试和主动消息兜底由调用方决定。
+            return await this.sendRegularMessage(endpointPath, buildResult, options);
         } catch (error) {
             if (replyMessageId && replySequence !== undefined)
                 this.releaseReplySequence(replyMessageId, replySequence);
@@ -272,13 +220,14 @@ export class MessageService {
     /**
      * 上传文件
      */
-    private async uploadFile(endpointPath: string, buildResult: BuildResult): Promise<Message.FileInfo> {
+    private async uploadFile(endpointPath: string, buildResult: BuildResult, options: SendOptions): Promise<Message.FileInfo> {
         const { local_path, ...payload } = buildResult.filePayload
         if (local_path) {
             if (!payload.file_type) throw new Error('Missing file_type for chunked upload')
             const uploader = new ChunkedUploader(this.request)
             return uploader.upload(endpointPath, local_path, payload.file_type, {
-                fileName: payload.file_name
+                fileName: payload.file_name,
+                signal: options.signal
             })
         }
 
@@ -287,7 +236,8 @@ export class MessageService {
             {
                 ...payload,
                 srv_send_msg: false
-            }
+            },
+            { timeout: options.timeout, signal: options.signal }
         );
         return result;
     }
@@ -303,7 +253,8 @@ export class MessageService {
                 headers: {
                     'Content-Type': buildResult.contentType
                 },
-                timeout: options.timeout || 10000
+                timeout: options.timeout ?? 10000,
+                signal: options.signal
             }
         );
         if (this.isAuditResult(result)) {

@@ -12,7 +12,7 @@
 
 向指定用户发送私聊消息。
 
-**方法名**: `bot.messageService.sendPrivateMessage(userId, message, source?)` / `bot.sendPrivateMessage(userId, message, source?)`
+**方法名**: `bot.messageService.sendPrivateMessage(userId, message, source?, options?)` / `bot.sendPrivateMessage(userId, message, source?, options?)`
 
 **参数**:
 | 参数名 | 类型 | 必填 | 描述 |
@@ -20,6 +20,12 @@
 | `userId` | `string` | ✅ | 用户 ID |
 | `message` | `Sendable` | ✅ | 消息内容 |
 | `source` | `Quotable` | ❌ | 引用消息 |
+| `options` | `SendOptions` | ❌ | 发送超时与取消信号设置 |
+
+`options.timeout` 默认为 `10000` 毫秒，设为 `0` 时取消单次请求超时。
+传入 `options.signal` 可以取消请求和文件上传。
+消息发送接口失败时，SDK 直接抛出原始错误，不自动重试或转为主动消息。
+SDK 不再提供 `options.fallbackToActive`，截止时间、重试和主动消息兜底由调用方负责。
 
 ```typescript
 // 使用服务模块（推荐）
