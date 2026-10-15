@@ -1,6 +1,7 @@
 {
     "name": "qq-official-bot",
     "version": "1.2.3-dndss.1",
+    "private": true,
     "description": "qq机器人开发SDK",
     "main": "./lib/index.js",
     "types": "./lib/index.d.ts",
@@ -22,7 +23,6 @@
         "clean": "rm -rf ./lib",
         "build": "npm run compile && npm run dtsc",
         "dev": "ts-node-dev -r tsconfig-paths/register ./src/test.ts",
-        "pub": "npm publish --access public",
         "docs:dev": "vitepress dev docs --port 5566",
         "docs:build": "vitepress build docs",
         "docs:serve": "vitepress serve docs",

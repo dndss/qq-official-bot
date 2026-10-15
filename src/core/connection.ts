@@ -37,6 +37,8 @@ export class Connection extends EventEmitter {
   private state: ConnectionState;
   private heartbeatParam: HeartbeatData;
   private heartbeatTimer?: NodeJS.Timeout;
+  private lifecycleGeneration: number = 0;
+  private pendingDelays = new Set<() => void>();
 
   constructor(bot: Client, config: ConnectionConfig = {}) {
     super();
@@ -100,12 +102,14 @@ export class Connection extends EventEmitter {
    * 处理重连
    */
   private async handleReconnect(): Promise<void> {
+    const generation = this.lifecycleGeneration;
     if (this.state.userClose) {
       return;
     }
 
     this.state.isReconnect = true;
     await this.delay(this.config.reconnectDelay!);
+    if (this.state.userClose || generation !== this.lifecycleGeneration) return;
     await this.connect();
   }
 
@@ -113,6 +117,7 @@ export class Connection extends EventEmitter {
    * 处理断开连接
    */
   private async handleDisconnect(data: any): Promise<void> {
+    const generation = this.lifecycleGeneration;
     if (this.state.userClose || [4914, 4915].includes(data.code)) {
       return;
     }
@@ -129,7 +134,12 @@ export class Connection extends EventEmitter {
       this.state.isReconnect = data.code === 4009;
       this.state.retry += 1;
 
-      await this.disconnect();
+      // 回收当前接收器，与用户主动停止区分；异步重连仍受启动周期约束。
+      this.state.alive = false;
+      this.stopHeartbeat();
+      this.emit('disconnect');
+      await Promise.resolve();
+      if (this.state.userClose || generation !== this.lifecycleGeneration) return;
       await this.connect();
     } else {
       this.bot.logger.mark("[CONNECTION] 超过重试次数，连接终止");
@@ -144,8 +154,10 @@ export class Connection extends EventEmitter {
    * 处理连接就绪
    */
   private handleReady(): void {
+    this.cancelPendingReconnects();
     this.bot.logger.mark("[CONNECTION] 连接成功");
     this.state.retry = 0;
+    this.state.userClose = false;
     this.state.alive = true;
     this.startHeartbeat();
   }
@@ -164,6 +176,7 @@ export class Connection extends EventEmitter {
    */
   async connect(): Promise<void> {
     try {
+      this.cancelPendingReconnects();
       this.state.userClose = false;
       this.emit('connecting');
 
@@ -181,6 +194,7 @@ export class Connection extends EventEmitter {
    * 断开连接
    */
   async disconnect(): Promise<void> {
+    this.cancelPendingReconnects();
     this.state.userClose = true;
     this.state.alive = false;
     this.stopHeartbeat();
@@ -263,13 +277,27 @@ export class Connection extends EventEmitter {
    * 工具方法：延迟
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => {
+      const finish = () => {
+        clearTimeout(timer);
+        this.pendingDelays.delete(finish);
+        resolve();
+      };
+      const timer = setTimeout(finish, ms);
+      this.pendingDelays.add(finish);
+    });
+  }
+
+  private cancelPendingReconnects(): void {
+    this.lifecycleGeneration++;
+    for (const cancel of this.pendingDelays) cancel();
   }
 
   /**
    * 清理资源
    */
   destroy(): void {
+    this.cancelPendingReconnects();
     this.stopHeartbeat();
     this.state.userClose = true;
     this.state.alive = false;

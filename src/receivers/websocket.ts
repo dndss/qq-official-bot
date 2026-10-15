@@ -61,6 +61,7 @@ export class WebSocketReceiver extends BaseReceiver<WebSocketHandler> {
     private heartbeatTimer: NodeJS.Timeout | null = null;
     private heartbeatTimeoutTimer: NodeJS.Timeout | null = null;
     private lastHeartbeatAck: number = 0;
+    private cancelReconnectDelay?: () => void;
 
     constructor(config: WebSocketReceiverConfig = new WebSocketReceiverConfig()) {
         super({});
@@ -93,10 +94,12 @@ export class WebSocketReceiver extends BaseReceiver<WebSocketHandler> {
      */
     public async stop(session?: Session<ReceiverMode.WEBSOCKET>): Promise<void> {
         this._isStarted = false;
+        this._isReady = false;
         this.lifecycleGeneration++;
         this.isReconnect = false;
         this.retryCount = 0;
-        this.disconnect();
+        this.cancelReconnectDelay?.();
+        await this.disconnect();
     }
 
     /**
@@ -137,6 +140,7 @@ export class WebSocketReceiver extends BaseReceiver<WebSocketHandler> {
             this.setupWebSocketConnection(ws);
 
         } catch (error) {
+            if (!this.isLifecycleActive(generation)) return;
             this.session.getBot().logger.error(`[WebSocketReceiver] 连接失败: ${error.message}`);
             this.emitError(error as Error);
             throw error;
@@ -148,20 +152,26 @@ export class WebSocketReceiver extends BaseReceiver<WebSocketHandler> {
      */
     private setupWebSocketConnection(ws: WebSocket): void {
         if (!this.session) return;
+        const generation = this.lifecycleGeneration;
+        const isCurrent = () => this.isLifecycleActive(generation) && this.handler.ws === ws;
 
         ws.on('open', () => {
+            if (!isCurrent()) return;
             this.session!.getBot().logger.debug('[WebSocketReceiver] WebSocket连接已建立');
         });
 
         ws.on('message', async (data) => {
+            if (!isCurrent()) return;
             await this.handleMessage(data);
         });
 
         ws.on('error', (error) => {
+            if (!isCurrent()) return;
             this.handleWebSocketError(error);
         });
 
         ws.on('close', (code, reason) => {
+            if (!isCurrent()) return;
             this.handleWebSocketClose(code, reason);
         });
     }
@@ -491,7 +501,7 @@ export class WebSocketReceiver extends BaseReceiver<WebSocketHandler> {
         const delay = Math.min(reconnectDelay * Math.pow(2, this.retryCount - 1), 30000);
         this.session.getBot().logger.debug(`[WebSocketReceiver] 等待 ${delay}ms 后重连`);
 
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await this.waitReconnectDelay(delay);
         if (!this.isLifecycleActive(generation)) return;
 
         this.isReconnect = resume;
@@ -512,10 +522,39 @@ export class WebSocketReceiver extends BaseReceiver<WebSocketHandler> {
     /**
      * 断开连接
      */
-    private disconnect(): void {
+    private async disconnect(): Promise<void> {
         this.isClosed = true;
         this.clearTimers();
-        this.handler.ws?.close();
+        const ws = this.handler.ws;
+        this.handler.ws = undefined;
+        if (!ws || ws.readyState === WebSocket.CLOSED) return;
+
+        await new Promise<void>((resolve, reject) => {
+            const onClose = (code: number, reason: Buffer) => {
+                this.emitClose(code, reason.toString());
+                resolve();
+            };
+            ws.once('close', onClose);
+            try {
+                ws.close();
+            } catch (error) {
+                ws.off('close', onClose);
+                reject(error);
+            }
+        });
+    }
+
+    private waitReconnectDelay(ms: number): Promise<void> {
+        this.cancelReconnectDelay?.();
+        return new Promise(resolve => {
+            const finish = () => {
+                clearTimeout(timer);
+                if (this.cancelReconnectDelay === finish) this.cancelReconnectDelay = undefined;
+                resolve();
+            };
+            const timer = setTimeout(finish, ms);
+            this.cancelReconnectDelay = finish;
+        });
     }
 
     /**

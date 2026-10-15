@@ -139,8 +139,12 @@ bot.on('ready', () => {
 ```
 
 `start()` 会等待机器人连接就绪。访问令牌获取失败（例如 `appid` 或 `secret`
-无效）时，返回的 Promise 会直接 reject，调用方应捕获错误，避免阻塞自身的
-初始化流程：
+无效）、接收器启动失败、就绪前报错或关闭时，返回的 Promise 会 reject，
+并停止本次连接尝试。启动期间调用 `stop()` 也会使等待中的启动 Promise reject。
+重复调用尚未完成的 `start()` 会共用同一次启动，不重复获取 token 或创建连接。
+
+成功或失败后，SDK 会移除本次启动使用的临时监听器。此行为不改变连接就绪后的
+自动重连策略，也未新增整体启动超时配置。调用方应捕获错误：
 
 ```typescript
 try {
@@ -159,12 +163,42 @@ try {
 ```typescript
 await bot.stop()
 console.log('机器人已停止')
+```
 
-// 监听停止事件
-bot.on('offline', () => {
-    console.log('机器人已下线')
+`stop()` 会立即标记停止、清除 token 与网关缓存，取消认证请求、刷新定时器和
+等待中的重试、重连任务，并等待接收器完成关闭。WebSocket 会等待旧连接关闭，
+Webhook 会等待 HTTP 服务关闭；停止失败会通过返回的 Promise 抛出。
+
+同一轮停止中的重复调用会共用停止过程。在停止完成前调用 `start()`，会等待旧
+接收器清理完成，再进行新的认证与连接。旧周期的迟到响应不会覆盖新 token、
+网关缓存或重新安排刷新任务。再次启动后会重新获取认证信息。
+
+## 错误处理
+
+SDK 不注册 `uncaughtException`、`unhandledRejection` 全局监听，也不决定宿主
+进程的退出或重启策略。创建多个 Bot、停止和重新启动 Bot，不会增加或移除宿主
+已有的全局异常监听器。
+
+- SDK 异步接口的失败通过 Promise 返回，调用方应使用 `await`、`try/catch` 或 `.catch()`。
+- 协议解析失败会记录包含原始错误的 error 日志，并丢弃本次无法解析的事件。
+- 业务事件回调遵循 `EventEmitter` 的调用语义。同步抛错沿事件分发调用栈传播，
+  不会被误记为协议解析失败；异步回调的 Promise 需要宿主自行捕获。
+
+下面的写法同时捕获业务处理中的同步异常和异步拒绝：
+
+```typescript
+bot.on('message', event => {
+    void (async () => {
+        if (event.raw_message === 'ping') await event.reply('pong')
+    })().catch(error => {
+        bot.logger.error('消息业务处理失败', error)
+    })
 })
 ```
+
+仅写 `void handleMessage(event)` 不会处理 Promise 拒绝。宿主应在事件入口捕获
+业务失败，并在项目启动入口统一管理进程级异常；已有全局处理的宿主无需 SDK
+重复注册。升级旧版本时，应先核对宿主的异步消息回调和关闭流程。
 
 ## 🔧 工具方法
 
