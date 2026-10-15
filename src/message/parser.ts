@@ -1,4 +1,5 @@
-import type { ForwardMessageAttachment, ForwardMessageData, ForwardMessageNode, MessageElem, Sendable } from "@/elements";
+import type { ForwardMessageAttachment, ForwardMessageData, ForwardMessageNode, MessageElem, ReferenceMessageData, Sendable } from "@/elements";
+import { parseReferenceMessage } from './reference';
 import { Bot } from "@/index";
 import type { Dict } from "@/types";
 import { trimQuote } from "@/utils/string";
@@ -176,6 +177,8 @@ export class Message {
     message_id: string
     /** 当前消息的引用索引，用于后续引用该消息 */
     msg_idx?: string
+    /** 引用内容快照，与当前消息正文及可定位的原消息标识分开。 */
+    quoted_message?: ReferenceMessageData
     sender: Message.Sender
     user_id: string
 
@@ -241,6 +244,8 @@ export namespace Message {
     export type SubType = 'direct' | 'friend' | 'temp' | 'normal'
 
     export function parse(this: Bot<ReceiverMode>, payload: Dict) {
+        const quoted = parseReferenceMessage(payload)
+        if (quoted) payload.quoted_message = quoted
         let template = (payload.content || '').trimStart();
         let result: MessageElem[] = []
         let brief: string = ''
@@ -251,11 +256,14 @@ export namespace Message {
         const appendAttachment = (attachment: Dict, description?: string) => {
             let { content_type, ...data } = attachment
             if (typeof content_type !== 'string') return false
-            const [category] = content_type.split('/')
+            const [category] = content_type.toLowerCase().split('/')
             const type: 'image' | 'video' | 'audio' | 'file' =
+                category === 'voice' ? 'audio' :
                 ['image', 'video', 'audio'].includes(category) ? category as 'image' | 'video' | 'audio' : 'file'
             if (typeof data.url === 'string' && !data.url.startsWith('http'))
                 data.url = `https://${data.url}`
+            if (type === 'audio' && typeof data.voice_wav_url === 'string' && !data.voice_wav_url.startsWith('http'))
+                data.voice_wav_url = `https://${data.voice_wav_url}`
             if (data.filename) {
                 data.name = data.filename
                 delete data.filename

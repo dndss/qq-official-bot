@@ -11,6 +11,33 @@ layout: doc
 
 不要把 `event.id` 同时用于这两个字段。
 
+## 接收嵌套引用
+
+对于 `message_type=103`，SDK 将 `msg_elements` 的结构化内容及嵌套引用文本
+解析为 `event.quoted_message`。缺少可解析快照时，使用
+`parallel_message.msg_nodes` 中的直接引用内容，并保留无法解析的文本。
+当前消息正文仍来自顶层 `content`，不会与引用链拼接。
+
+```typescript
+interface ReferenceMessageNode {
+  content: string
+  msg_idx?: string
+  children?: ReferenceMessageNode[]
+}
+
+interface ReferenceMessageData {
+  nodes: ReferenceMessageNode[]
+  raw?: string
+  truncated?: boolean
+}
+```
+
+`parseReferenceMessage(payload)` 也可单独解析原始网关消息体。
+解析限制为 16 层、100 个节点、64 KiB 文本；超过限制时保留受限原文。
+引用快照不包含可靠的发送者时，不从当前发送者推断。
+`TMP_...` 以及不同的 `REFIDX_...` 不建立别名关系；
+只有已知消息 ID 或引用索引精确匹配时，使用方才能定位原消息。
+
 ## 回复序号
 
 SDK 按 `msg_id` 在内存中维护 5 分钟的回复序号。第一次被动回复使用

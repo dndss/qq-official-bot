@@ -13,6 +13,7 @@ interface AudioElement {
   type: 'audio'
   file: string
   url?: string
+  voice_wav_url?: string  // 官方提供的 WAV 副本，仅接收消息时有效
   name?: string  // 仅接收消息时有效
   description?: string  // 附件说明，仅接收消息时有效
 }
@@ -25,10 +26,16 @@ interface AudioElement {
 | type | string | ✅ | 消息段类型，固定为 `audio` |
 | file | string | ✅ | 音频文件路径、URL 或标识符 |
 | url | string | ❌ | 音频 URL 地址（接收消息时可能存在） |
+| voice_wav_url | string | ❌ | 官方提供的 WAV 副本 URL；保留原始 `url` 和文件名，不在 SDK 内转码 |
 | name | string | ❌ | 音频文件名（仅接收消息时有效） |
 | description | string | ❌ | 附件占位标签携带的音频说明（仅接收消息时有效） |
 
 ## 支持的音频格式
+
+接收附件时，`content_type: "voice"` 与 `audio/*` 均解析为 `audio` 消息段。
+官方语音事件可能同时提供 AMR 原文件的 `url`、`filename` 和 WAV 副本的
+`voice_wav_url`；SDK 将文件名规范为 `name`，并保留两个地址供使用方分别下载或播放。
+没有 WAV 地址时不根据原文件 URL 推测副本地址。
 
 - **MP3** - 最常用的音频格式，兼容性最好
 - **WAV** - 无损音频格式，文件较大

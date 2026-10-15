@@ -23,6 +23,8 @@ export interface ForwardMessageAttachment {
     height?: number
     size_text?: string
     url?: string
+    /** 官方提供的 WAV 音频副本，仅接收有效；原文件仍使用 url。 */
+    voice_wav_url?: string
     animated?: boolean
 }
 
@@ -39,6 +41,20 @@ export interface ForwardMessageData {
     title: string
     nodes: ForwardMessageNode[]
     raw: string
+}
+
+/** 收到的引用内容快照；msg_idx 不保证等于原消息事件的引用索引。 */
+export interface ReferenceMessageNode {
+    content: string
+    msg_idx?: string
+    children?: ReferenceMessageNode[]
+}
+
+export interface ReferenceMessageData {
+    nodes: ReferenceMessageNode[]
+    /** 文本解析失败或超过限制时保留的原文。 */
+    raw?: string
+    truncated?: boolean
 }
 
 export interface MessageElemMap {
@@ -79,6 +95,8 @@ export interface MessageElemMap {
     audio: {
         file: string
         url?: string
+        /** 官方提供的 WAV 音频副本，仅接收有效；不替换原始 url。 */
+        voice_wav_url?: string
         /** 仅接收有效 */
         name?: string
         /** 附件说明，接收消息时有效 */

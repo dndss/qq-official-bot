@@ -4,6 +4,7 @@
 export { MessageBuilder } from './builder';
 export { FileProcessor } from './file-processor';
 export { ChunkedUploader, UploadDailyLimitExceededError } from './chunked-upload';
+export { parseReferenceMessage } from './reference';
 
 export type { MessagePayload, FilePayload, BuildResult } from './builder';
 export type { FileUploadResult, UploadOptions } from './file-processor';
