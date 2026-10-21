@@ -47,7 +47,8 @@ import {
     ThreadService,
     AudioService,
     BotService,
-    GroupService
+    GroupService,
+    MaterialService
 } from "@/services";
 
 
@@ -69,6 +70,7 @@ export class Bot<T extends ReceiverMode = ReceiverMode, M extends ApplicationPla
     public readonly audioService: AudioService = new AudioService(this.request);
     public readonly botService: BotService = new BotService(this.request);
     public readonly groupService: GroupService = new GroupService(this.request);
+    public readonly materialService: MaterialService = new MaterialService(this.request);
 
     constructor(config: Bot.Config<T, M>) {
         super(config)

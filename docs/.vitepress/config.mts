@@ -26,6 +26,7 @@ export default defineConfig({
                 items: [
                     { text: '底层 OpenAPI', link: '/api/openapi' },
                     { text: '公共接口', link: '/api/common' },
+                    { text: 'Markdown 图片素材', link: '/api/material' },
                     { text: '频道', link: '/api/guild' },
                     { text: '子频道', link: '/api/channel' },
                     { text: '私信', link: '/api/direct' },
@@ -76,6 +77,7 @@ export default defineConfig({
                 items: [
                     { text: '底层 OpenAPI', link: '/api/openapi' },
                     { text: '公共接口', link: '/api/common' },
+                    { text: 'Markdown 图片素材', link: '/api/material' },
                     { text: '频道', link: '/api/guild' },
                     { text: '子频道', link: '/api/channel' },
                     { text: '私信', link: '/api/direct' },

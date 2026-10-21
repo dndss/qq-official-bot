@@ -4,6 +4,75 @@ import {GuildMember} from "@/entries/guildMember";
 
 export type Dict<T = any, K extends string | symbol = string> = Record<K, T>
 
+export type MaterialImageContentType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'
+
+export interface MaterialRequestOptions {
+    /** 单次请求超时（毫秒）；0 表示不限制。uploadImage 默认每步 30 秒。 */
+    timeout?: number
+    signal?: AbortSignal
+}
+
+export interface MaterialImageUploadOptions extends MaterialRequestOptions {
+    /** 本地路径默认取文件名；Buffer 必填。 */
+    fileName?: string
+    /** 本地路径默认按文件扩展名推导；Buffer 必填。 */
+    contentType?: MaterialImageContentType
+}
+
+export interface MaterialImagePrepareParams {
+    file_name: string
+    file_size: number
+    content_type: MaterialImageContentType
+    /** 32 位十六进制。 */
+    md5: string
+    /** 40 位十六进制。 */
+    sha1: string
+}
+
+export interface MaterialImagePrepareResult {
+    /** 上传任务有效期 4 小时。 */
+    upload_id: string
+    presigned_url: string
+    /** 预签名地址有效期（秒）。 */
+    expires_in: number
+}
+
+export interface MaterialImageCompleteParams {
+    upload_id: string
+    /** COS PUT 响应 ETag 去掉引号后的值。 */
+    md5: string
+}
+
+export interface MaterialImageResult {
+    image_id: string
+    /** 用于 Markdown 的 qqbot-media:// 引用，与当前机器人绑定。 */
+    url: string
+    /** 滑动有效期窗口（秒），成功引用后顺延。 */
+    ttl: number
+    /** 临时预览链接，不应持久化存储。 */
+    preview_url: string
+}
+
+export interface MaterialImageInfo {
+    image_id: string
+    url: string
+    file_name: string
+    /** 临时预览链接，不应持久化存储。 */
+    preview_url: string
+    /** Unix 秒；平台可能将 int64 编码为十进制字符串。 */
+    created_at: number | string
+    /** Unix 秒，成功引用后顺延；平台可能返回十进制字符串。 */
+    expires_at: number | string
+}
+
+export interface MaterialImageListResult {
+    images: MaterialImageInfo[]
+    /** 空字符串表示末页。 */
+    next_cursor: string
+    /** 平台可能将 uint64 编码为十进制字符串。 */
+    total: number | string
+}
+
 /** 流式私聊消息的输入模式。 */
 export type PrivateStreamInputMode = 'append' | 'replace'
 
