@@ -34,6 +34,8 @@ export interface SendResult {
 }
 
 const REPLY_SEQUENCE_TTL = 5 * 60 * 1000;
+const REPLY_SEQUENCE_DUPLICATED = 40054005;
+const MAX_REPLY_SEQUENCE = 5;
 
 interface ReplySequenceEntry {
     sequence: number;
@@ -73,6 +75,16 @@ export class MessageService {
         if (!current || current.sequence !== sequence) return;
         if (sequence === 1) this.replySequences.delete(messageId);
         else current.sequence -= 1;
+    }
+
+    private getOpenApiErrorCode(error: unknown): number | undefined {
+        const value = Number(
+            (error as any)?.err_code ??
+            (error as any)?.response?.data?.err_code ??
+            (error as any)?.response?.data?.code ??
+            (error as any)?.code
+        );
+        return Number.isSafeInteger(value) ? value : undefined;
     }
 
     /**
@@ -196,6 +208,7 @@ export class MessageService {
 
         const replyMessageId = buildResult.messagePayload.msg_id;
         let replySequence: number | undefined;
+        let releaseSequenceOnFailure = true;
         if (replyMessageId) {
             replySequence = this.nextReplySequence(replyMessageId);
             buildResult.messagePayload.msg_seq = replySequence;
@@ -208,10 +221,28 @@ export class MessageService {
                 buildResult.messagePayload.media = { file_info: uploaded.file_info };
             }
 
-            // 发送普通消息；重试和主动消息兜底由调用方决定。
-            return await this.sendRegularMessage(endpointPath, buildResult, options);
+            while (true) {
+                options.signal?.throwIfAborted();
+                try {
+                    return await this.sendRegularMessage(endpointPath, buildResult, options);
+                } catch (error) {
+                    if (!replyMessageId || replySequence === undefined ||
+                        this.getOpenApiErrorCode(error) !== REPLY_SEQUENCE_DUPLICATED)
+                        throw error;
+
+                    // 已确认被腾讯占用的序号不能回退；并发已分配的序号也不重复使用。
+                    releaseSequenceOnFailure = false;
+                    const allocatedSequence = this.replySequences.get(replyMessageId)?.sequence ?? replySequence;
+                    if (Math.max(replySequence, allocatedSequence) >= MAX_REPLY_SEQUENCE)
+                        throw error;
+                    options.signal?.throwIfAborted();
+                    replySequence = this.nextReplySequence(replyMessageId);
+                    buildResult.messagePayload.msg_seq = replySequence;
+                    releaseSequenceOnFailure = true;
+                }
+            }
         } catch (error) {
-            if (replyMessageId && replySequence !== undefined)
+            if (releaseSequenceOnFailure && replyMessageId && replySequence !== undefined)
                 this.releaseReplySequence(replyMessageId, replySequence);
             throw error;
         }
