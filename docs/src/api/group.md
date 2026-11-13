@@ -357,6 +357,7 @@ interface GroupMessageEvent extends Message {
     sender: {
         user_id: string
         user_name: string
+        member_nickname?: string // QQ 群消息事件中的 author.member_nickname
         permissions: string[]
     }
     

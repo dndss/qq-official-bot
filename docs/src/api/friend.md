@@ -202,6 +202,8 @@ await bot.messageService.sendPrivateMessage(user_id, {
 
 ### 监听私聊事件
 
+好友私聊事件的 `sender.user_name` 来自当前 `C2C_MESSAGE_CREATE` 的 `author.username`。该字段缺失时，`sender.user_name` 为 `undefined`。
+
 ```typescript
 // 监听私聊消息
 bot.on('message.private', async (event) => {

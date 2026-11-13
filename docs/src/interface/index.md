@@ -129,6 +129,7 @@ class PrivateMessageEvent extends Message implements MessageEvent {
 class GroupMessageEvent extends Message implements MessageEvent {
     message_type: 'group'
     group_id: string
+    sender: Message.Sender & { member_nickname?: string }
     
     async reply(message: Sendable): Promise<any>
     async recall(): Promise<boolean>

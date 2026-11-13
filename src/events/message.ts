@@ -70,6 +70,7 @@ export namespace MessageAuditEvent{
 export class GroupMessageEvent extends Message implements MessageEvent {
     group_id: string
     group_name: string
+    declare sender: Message.Sender & { member_nickname?: string }
 
     constructor(bot: Bot, payload: Partial<Message>) {
         super(bot, payload);
@@ -160,6 +161,7 @@ export namespace MessageEvent {
         payload.message = message as Sendable
         const member = payload.member
         const permissions = member?.roles || []
+        const memberNickname = payload.author?.member_nickname
         Object.assign(payload, {
             user_id: payload.author?.id,
             message_id: payload.id,
@@ -168,7 +170,10 @@ export namespace MessageEvent {
                 user_id: payload.author?.id,
                 user_name: payload.author?.username,
                 permissions: ['normal'].concat(permissions),
-                user_openid: payload.author?.user_openid || payload.author?.member_openid
+                user_openid: payload.author?.user_openid || payload.author?.member_openid,
+                ...(event === 'message.group' && typeof memberNickname === 'string' && memberNickname
+                    ? { member_nickname: memberNickname }
+                    : {})
             },
             timestamp: new Date(payload.timestamp).getTime() / 1000,
         })
