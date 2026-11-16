@@ -24,6 +24,11 @@ export namespace Group {
         member_role: 'member' | 'owner' | 'admin'
     }
 
+    /** 批量移除群成员响应 */
+    export interface BatchRemoveMembersResult {
+        remove_members_result: string
+    }
+
     /** 群成员禁言操作类型 */
     export type MemberMuteOperation = 'add' | 'update' | 'del'
 

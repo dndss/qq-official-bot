@@ -8,6 +8,29 @@
 
 ## 📱 私聊消息管理
 
+### 获取用户基本信息
+
+**方法名**: `bot.userService.getInfo(userOpenid)` / `bot.getUserInfo(userOpenid)` / `bot.getFriendInfo(userOpenid)`
+
+```typescript
+const info = await bot.getUserInfo(user_openid)
+console.log(info.username, info.avatar, info.allow_proactive_msg)
+console.log(info.union_openid) // 可选：跨应用关联用户 OpenID
+```
+
+向 `GET /v2/users/{user_openid}/info` 传入非空字符串 OpenID，原样返回
+`User.ApiInfo`，不转换用户名、头像 URL 或主动消息开关，也不补充不存在的用户字段。
+`union_openid` 仅在绑定第三方应用时有效，响应可能不包含该字段。
+该接口不返回群身份或群名片，不能用于判断用户是否在某个群内。
+
+接口频率限制为 10 QPS，调用方应控制频率。用户与机器人没有好友关系时，
+官方返回 `40184001`；SDK 直接抛出请求错误，不自动重试或回退到消息缓存。
+SDK 不会在收到消息时自动调用此接口。
+
+高级用法可通过包入口导入 `UserService`，并传入已配置鉴权的 Axios 实例。
+
+[官方接口文档](https://bot.q.qq.com/wiki/develop/api-v2/autogen/api/v2_users_user_openid_info.get.html)
+
 ### 发送私聊消息
 
 向指定用户发送私聊消息。

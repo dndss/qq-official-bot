@@ -129,6 +129,25 @@ const success = await bot.recallGroupMessage(group_id, message_id)
 
 ## 👥 群成员管理
 
+### 批量移除群成员
+
+**方法名**: `bot.groupService.batchRemoveMembers(groupOpenid, memberOpenids)` / `bot.batchRemoveGroupMembers(groupOpenid, memberOpenids)`
+
+```typescript
+const result = await bot.batchRemoveGroupMembers(group_openid, [member_openid])
+console.log(result.remove_members_result === 'success')
+```
+
+`memberOpenids` 必须包含 1 至 20 个非空字符串，群 OpenID 也必须是非空字符串。
+SDK 将成员列表作为 `member_openids` 发送，原样返回响应体，不自动拆批或重试。
+接口频率限制为 30 QPM；调用方应控制频率。
+
+群主和机器人 WEB 管理端均需开启“移除群成员”开关。关闭时分别可能返回
+`40103012`、`40103011`，SDK 继续抛出原始请求错误。
+该接口仅移除成员，不提供拉黑参数，也不需要先获取群成员列表。
+
+[官方接口文档](https://bot.q.qq.com/wiki/develop/api-v2/autogen/api/v2_groups_group_openid_batch_remove_members.post.html)
+
 ### 查询群禁言状态
 
 查询群聊的全员禁言规则和当前处于禁言状态的成员。

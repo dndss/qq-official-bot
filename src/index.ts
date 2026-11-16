@@ -7,6 +7,7 @@ export * from './receivers'
 export * from './elements'
 export * from './types'
 export { MaterialService } from './services/material'
+export { UserService } from './services/user'
 export * from './constants'
 
 // Segment utilities

@@ -48,7 +48,8 @@ import {
     AudioService,
     BotService,
     GroupService,
-    MaterialService
+    MaterialService,
+    UserService
 } from "@/services";
 
 
@@ -71,6 +72,7 @@ export class Bot<T extends ReceiverMode = ReceiverMode, M extends ApplicationPla
     public readonly botService: BotService = new BotService(this.request);
     public readonly groupService: GroupService = new GroupService(this.request);
     public readonly materialService: MaterialService = new MaterialService(this.request);
+    public readonly userService: UserService = new UserService(this.request);
 
     constructor(config: Bot.Config<T, M>) {
         super(config)
@@ -531,6 +533,15 @@ export class Bot<T extends ReceiverMode = ReceiverMode, M extends ApplicationPla
     async setGroupMemberMuteState(group_id: string, members: Group.SetMemberMuteState[]) {
         return this.groupService.setMemberMuteState(group_id, members)
     }
+
+    /**
+     * 批量移除群成员
+     * @param group_id 群 OpenID
+     * @param member_openids 待移除成员 OpenID 列表，单次 1 至 20 个
+     */
+    async batchRemoveGroupMembers(group_id: string, member_openids: string[]) {
+        return this.groupService.batchRemoveMembers(group_id, member_openids)
+    }
     /**
      * 获取好友列表
      */
@@ -538,11 +549,18 @@ export class Bot<T extends ReceiverMode = ReceiverMode, M extends ApplicationPla
         throw UnsupportedMethodError
     }
     /**
-     * 获取好友信息
-     * @param friend_id
+     * 获取用户基本信息，需要用户与机器人存在好友关系
+     * @param user_openid 用户 OpenID
+     */
+    async getUserInfo(user_openid: string) {
+        return this.userService.getInfo(user_openid)
+    }
+    /**
+     * 获取好友基本信息，与 getUserInfo 使用同一接口
+     * @param friend_id 用户 OpenID
      */
     async getFriendInfo(friend_id: string) {
-        throw UnsupportedMethodError
+        return this.userService.getInfo(friend_id)
     }
     /**
      * 发送私聊信息
